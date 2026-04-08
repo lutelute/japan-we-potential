@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>全国風力発電ポテンシャルマップ</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #f5f5f5; color: #333; }
+  header { background: linear-gradient(135deg, #1a5276, #2e86c1); color: white; padding: 2rem; text-align: center; }
+  header h1 { font-size: 1.8rem; margin-bottom: 0.5rem; }
+  header p { opacity: 0.85; font-size: 0.95rem; }
+  .container { max-width: 1100px; margin: 2rem auto; padding: 0 1rem; }
+  .card { background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 1.5rem; overflow: hidden; }
+  .card h2 { background: #2e86c1; color: white; padding: 0.8rem 1.2rem; font-size: 1.1rem; }
+  .card-body { padding: 1.2rem; }
+  .pref-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.8rem; }
+  .pref-link { display: block; padding: 0.8rem 1rem; background: #eaf2f8; border-radius: 6px; text-decoration: none; color: #1a5276; font-weight: 500; transition: background 0.2s; }
+  .pref-link:hover { background: #d4e6f1; }
+  .pref-link .status { font-size: 0.8rem; color: #888; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 0.5rem 0.8rem; text-align: left; border-bottom: 1px solid #eee; }
+  th { background: #f8f9fa; font-weight: 600; }
+  .legend { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 0.5rem; }
+  .legend-item { display: flex; align-items: center; gap: 0.3rem; font-size: 0.85rem; }
+  .legend-color { width: 20px; height: 14px; border-radius: 2px; }
+  footer { text-align: center; padding: 2rem; color: #888; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>全国 風力発電ポテンシャルマップ</h1>
+  <p>GIS-MCDA (AHP) による陸上風力発電 導入・適地ポテンシャル評価</p>
+</header>
+
+<div class="container">
+
+  <div class="card">
+    <h2>都道府県別マップ</h2>
+    <div class="card-body">
+      <div class="pref-grid" id="pref-grid">
+        <!-- JS で動的生成 -->
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>AHP 評価基準</h2>
+    <div class="card-body">
+      <table>
+        <tr><th>基準</th><th>重み</th><th>データソース</th></tr>
+        <tr><td>風速 (100m高さ)</td><td>30%</td><td>ERA5 再解析</td></tr>
+        <tr><td>送電線距離 (154kV+)</td><td>15%</td><td>All-Japan-Grid</td></tr>
+        <tr><td>傾斜</td><td>12%</td><td>SRTM 30m DEM</td></tr>
+        <tr><td>変電所距離 (66kV+)</td><td>10%</td><td>All-Japan-Grid</td></tr>
+        <tr><td>土地利用</td><td>10%</td><td>OpenStreetMap</td></tr>
+        <tr><td>居住地距離</td><td>8%</td><td>OpenStreetMap</td></tr>
+        <tr><td>標高</td><td>5%</td><td>SRTM 30m DEM</td></tr>
+        <tr><td>道路距離</td><td>5%</td><td>-</td></tr>
+        <tr><td>保護区域</td><td>5%</td><td>-</td></tr>
+      </table>
+      <div class="legend" style="margin-top: 1rem;">
+        <div class="legend-item"><div class="legend-color" style="background: rgb(220,20,60);"></div>不適 (0-19)</div>
+        <div class="legend-item"><div class="legend-color" style="background: rgb(255,140,0);"></div>低 (20-39)</div>
+        <div class="legend-item"><div class="legend-color" style="background: rgb(218,165,32);"></div>中 (40-59)</div>
+        <div class="legend-item"><div class="legend-color" style="background: rgb(34,139,34);"></div>高 (60-79)</div>
+        <div class="legend-item"><div class="legend-color" style="background: rgb(0,100,0);"></div>最適 (80-100)</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  PWS Lab / 福井大学 &mdash; japan-we-potential
+</footer>
+
+<script>
+const prefectures = [
+  {id: "hokkaido_ishikari", name: "北海道（石狩）"},
+  {id: "hokkaido_sorachi", name: "北海道（空知）"},
+  {id: "hokkaido_shiribeshi", name: "北海道（後志）"},
+  {id: "hokkaido_iburi", name: "北海道（胆振）"},
+  {id: "hokkaido_hidaka", name: "北海道（日高）"},
+  {id: "hokkaido_oshima", name: "北海道（渡島）"},
+  {id: "hokkaido_hiyama", name: "北海道（檜山）"},
+  {id: "hokkaido_kamikawa", name: "北海道（上川）"},
+  {id: "hokkaido_rumoi", name: "北海道（留萌）"},
+  {id: "hokkaido_soya", name: "北海道（宗谷）"},
+  {id: "hokkaido_okhotsk", name: "北海道（オホーツク）"},
+  {id: "hokkaido_tokachi", name: "北海道（十勝）"},
+  {id: "hokkaido_kushiro", name: "北海道（釧路）"},
+  {id: "hokkaido_nemuro", name: "北海道（根室）"},
+  {id: "aomori", name: "青森県"},
+  {id: "iwate", name: "岩手県"},
+  {id: "miyagi", name: "宮城県"},
+  {id: "akita", name: "秋田県"},
+  {id: "yamagata", name: "山形県"},
+  {id: "fukushima", name: "福島県"},
+  {id: "ibaraki", name: "茨城県"},
+  {id: "tochigi", name: "栃木県"},
+  {id: "gunma", name: "群馬県"},
+  {id: "saitama", name: "埼玉県"},
+  {id: "chiba", name: "千葉県"},
+  {id: "tokyo", name: "東京都"},
+  {id: "kanagawa", name: "神奈川県"},
+  {id: "niigata", name: "新潟県"},
+  {id: "toyama", name: "富山県"},
+  {id: "ishikawa", name: "石川県"},
+  {id: "fukui", name: "福井県"},
+  {id: "yamanashi", name: "山梨県"},
+  {id: "nagano", name: "長野県"},
+  {id: "gifu", name: "岐阜県"},
+  {id: "shizuoka", name: "静岡県"},
+  {id: "aichi", name: "愛知県"},
+  {id: "mie", name: "三重県"},
+  {id: "shiga", name: "滋賀県"},
+  {id: "kyoto", name: "京都府"},
+  {id: "osaka", name: "大阪府"},
+  {id: "hyogo", name: "兵庫県"},
+  {id: "nara", name: "奈良県"},
+  {id: "wakayama", name: "和歌山県"},
+  {id: "tottori", name: "鳥取県"},
+  {id: "shimane", name: "島根県"},
+  {id: "okayama", name: "岡山県"},
+  {id: "hiroshima", name: "広島県"},
+  {id: "yamaguchi", name: "山口県"},
+  {id: "tokushima", name: "徳島県"},
+  {id: "kagawa", name: "香川県"},
+  {id: "ehime", name: "愛媛県"},
+  {id: "kochi", name: "高知県"},
+  {id: "fukuoka", name: "福岡県"},
+  {id: "saga", name: "佐賀県"},
+  {id: "nagasaki", name: "長崎県"},
+  {id: "kumamoto", name: "熊本県"},
+  {id: "oita", name: "大分県"},
+  {id: "miyazaki", name: "宮崎県"},
+  {id: "kagoshima", name: "鹿児島県"},
+  {id: "okinawa", name: "沖縄県"},
+];
+
+const grid = document.getElementById('pref-grid');
+prefectures.forEach(p => {
+  const a = document.createElement('a');
+  a.className = 'pref-link';
+  a.href = `${p.id}/wind_potential_map.html`;
+  a.innerHTML = `${p.name}<br><span class="status">wind_potential_map.html</span>`;
+  grid.appendChild(a);
+});
+</script>
+
+</body>
+</html>
