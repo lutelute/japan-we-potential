@@ -238,6 +238,8 @@ def main():
     parser.add_argument("--reset", action="store_true")
     parser.add_argument("--wind-fallback", action="store_true",
                         help="ERA5が使えない場合、標高ベースの風速推定を使用")
+    parser.add_argument("--skip-osm", action="store_true",
+                        help="OSM土地利用取得をスキップ (デフォルト値で代替)")
     args = parser.parse_args()
 
     workers = max(1, args.workers)
@@ -280,7 +282,11 @@ def main():
     phase2_list = [p for p in pref_list if p not in phase1_failed]
 
     # Phase 2a: Overpass API (順次)
-    phase2a_failed = run_phase_overpass(phase2_list, args.resolution, cp)
+    if args.skip_osm:
+        log.info("OSM skipped (--skip-osm)")
+        phase2a_failed = []
+    else:
+        phase2a_failed = run_phase_overpass(phase2_list, args.resolution, cp)
 
     # Phase 2b: Wind data (並列 or 順次)
     phase2b_failed = run_phase_parallel(

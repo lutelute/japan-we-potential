@@ -3,151 +3,468 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>全国風力発電ポテンシャルマップ</title>
+<title>全国 陸上風力発電ポテンシャルマップ</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #f5f5f5; color: #333; }
-  header { background: linear-gradient(135deg, #1a5276, #2e86c1); color: white; padding: 2rem; text-align: center; }
-  header h1 { font-size: 1.8rem; margin-bottom: 0.5rem; }
-  header p { opacity: 0.85; font-size: 0.95rem; }
-  .container { max-width: 1100px; margin: 2rem auto; padding: 0 1rem; }
-  .card { background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 1.5rem; overflow: hidden; }
-  .card h2 { background: #2e86c1; color: white; padding: 0.8rem 1.2rem; font-size: 1.1rem; }
-  .card-body { padding: 1.2rem; }
-  .pref-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.8rem; }
-  .pref-link { display: block; padding: 0.8rem 1rem; background: #eaf2f8; border-radius: 6px; text-decoration: none; color: #1a5276; font-weight: 500; transition: background 0.2s; }
-  .pref-link:hover { background: #d4e6f1; }
-  .pref-link .status { font-size: 0.8rem; color: #888; }
-  table { width: 100%; border-collapse: collapse; }
-  th, td { padding: 0.5rem 0.8rem; text-align: left; border-bottom: 1px solid #eee; }
-  th { background: #f8f9fa; font-weight: 600; }
-  .legend { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 0.5rem; }
-  .legend-item { display: flex; align-items: center; gap: 0.3rem; font-size: 0.85rem; }
-  .legend-color { width: 20px; height: 14px; border-radius: 2px; }
-  footer { text-align: center; padding: 2rem; color: #888; font-size: 0.85rem; }
+:root {
+  --sidebar-w: 280px;
+  --header-h: 56px;
+  --accent: #1565c0;
+  --accent-light: #e3f2fd;
+  --bg: #fafafa;
+  --sidebar-bg: #263238;
+  --sidebar-text: #cfd8dc;
+  --sidebar-active: #37474f;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { height:100%; overflow:hidden; font-family:'Helvetica Neue',Arial,'Hiragino Sans',sans-serif; }
+
+/* ── Header ── */
+.header {
+  height: var(--header-h);
+  background: var(--sidebar-bg);
+  color: white;
+  display: flex;
+  align-items: center;
+  padding: 0 1.2rem;
+  gap: 1rem;
+  z-index: 10;
+  border-bottom: 2px solid var(--accent);
+}
+.header h1 { font-size: 1.15rem; font-weight: 600; white-space: nowrap; }
+.header .subtitle { font-size: 0.78rem; opacity: 0.7; }
+.header .badge { background: var(--accent); padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; margin-left: auto; }
+
+/* ── Layout ── */
+.layout {
+  display: flex;
+  height: calc(100% - var(--header-h));
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  width: var(--sidebar-w);
+  min-width: var(--sidebar-w);
+  background: var(--sidebar-bg);
+  color: var(--sidebar-text);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.sidebar-search {
+  padding: 0.6rem;
+  position: sticky;
+  top: 0;
+  background: var(--sidebar-bg);
+  z-index: 2;
+}
+.sidebar-search input {
+  width: 100%;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid #455a64;
+  border-radius: 4px;
+  background: #37474f;
+  color: white;
+  font-size: 0.85rem;
+  outline: none;
+}
+.sidebar-search input::placeholder { color: #78909c; }
+.sidebar-search input:focus { border-color: var(--accent); }
+
+.region-group { margin-bottom: 0.2rem; }
+.region-label {
+  display: flex;
+  align-items: center;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #90a4ae;
+  cursor: pointer;
+  user-select: none;
+}
+.region-label:hover { color: #b0bec5; }
+.region-label .arrow { margin-right: 0.3rem; transition: transform 0.15s; font-size: 0.6rem; }
+.region-label.collapsed .arrow { transform: rotate(-90deg); }
+.region-items { overflow: hidden; }
+.region-items.hidden { display: none; }
+
+.pref-item {
+  display: flex;
+  align-items: center;
+  padding: 0.4rem 0.8rem 0.4rem 1.4rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.1s;
+  border-left: 3px solid transparent;
+  gap: 0.4rem;
+}
+.pref-item:hover { background: #37474f; }
+.pref-item.active { background: var(--sidebar-active); border-left-color: var(--accent); color: white; font-weight: 600; }
+.pref-item .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.pref-item .dot.ready { background: #4caf50; }
+.pref-item .dot.pending { background: #616161; }
+
+/* ── Main content ── */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+/* ── Info bar ── */
+.info-bar {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background: white;
+  border-bottom: 1px solid #e0e0e0;
+  gap: 1rem;
+  flex-wrap: wrap;
+  min-height: 44px;
+}
+.info-bar .pref-name { font-size: 1.1rem; font-weight: 700; color: #263238; }
+.info-bar .legend {
+  display: flex;
+  gap: 0.6rem;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+.legend-chip {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.72rem;
+  color: #546e7a;
+}
+.legend-chip .swatch { width: 14px; height: 10px; border-radius: 2px; }
+
+/* ── Tabs ── */
+.tabs {
+  display: flex;
+  background: white;
+  border-bottom: 1px solid #e0e0e0;
+  overflow-x: auto;
+}
+.tab {
+  padding: 0.45rem 1rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  color: #78909c;
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s;
+}
+.tab:hover { color: #263238; }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+
+/* ── Map frame ── */
+.map-frame {
+  flex: 1;
+  position: relative;
+}
+.map-frame iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+.map-frame .placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #90a4ae;
+  font-size: 1.1rem;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+.placeholder svg { opacity: 0.3; }
+
+/* ── Info panel (右下) ── */
+.info-panel {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  background: rgba(255,255,255,0.95);
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+  padding: 0.8rem 1rem;
+  font-size: 0.8rem;
+  max-width: 280px;
+  display: none;
+  z-index: 5;
+}
+.info-panel h3 { font-size: 0.85rem; margin-bottom: 0.4rem; color: #263238; }
+.info-panel table { width: 100%; }
+.info-panel td { padding: 0.15rem 0; }
+.info-panel td:first-child { color: #78909c; }
+.info-panel td:last-child { text-align: right; font-weight: 600; }
+
+/* ── mobile ── */
+@media (max-width: 768px) {
+  .sidebar { width: 220px; min-width: 220px; }
+  .header h1 { font-size: 0.95rem; }
+  .info-bar .legend { display: none; }
+}
 </style>
 </head>
 <body>
 
-<header>
-  <h1>全国 風力発電ポテンシャルマップ</h1>
-  <p>GIS-MCDA (AHP) による陸上風力発電 導入・適地ポテンシャル評価</p>
-</header>
-
-<div class="container">
-
-  <div class="card">
-    <h2>都道府県別マップ</h2>
-    <div class="card-body">
-      <div class="pref-grid" id="pref-grid">
-        <!-- JS で動的生成 -->
-      </div>
-    </div>
-  </div>
-
-  <div class="card">
-    <h2>AHP 評価基準</h2>
-    <div class="card-body">
-      <table>
-        <tr><th>基準</th><th>重み</th><th>データソース</th></tr>
-        <tr><td>風速 (100m高さ)</td><td>30%</td><td>ERA5 再解析</td></tr>
-        <tr><td>送電線距離 (154kV+)</td><td>15%</td><td>All-Japan-Grid</td></tr>
-        <tr><td>傾斜</td><td>12%</td><td>SRTM 30m DEM</td></tr>
-        <tr><td>変電所距離 (66kV+)</td><td>10%</td><td>All-Japan-Grid</td></tr>
-        <tr><td>土地利用</td><td>10%</td><td>OpenStreetMap</td></tr>
-        <tr><td>居住地距離</td><td>8%</td><td>OpenStreetMap</td></tr>
-        <tr><td>標高</td><td>5%</td><td>SRTM 30m DEM</td></tr>
-        <tr><td>道路距離</td><td>5%</td><td>-</td></tr>
-        <tr><td>保護区域</td><td>5%</td><td>-</td></tr>
-      </table>
-      <div class="legend" style="margin-top: 1rem;">
-        <div class="legend-item"><div class="legend-color" style="background: rgb(220,20,60);"></div>不適 (0-19)</div>
-        <div class="legend-item"><div class="legend-color" style="background: rgb(255,140,0);"></div>低 (20-39)</div>
-        <div class="legend-item"><div class="legend-color" style="background: rgb(218,165,32);"></div>中 (40-59)</div>
-        <div class="legend-item"><div class="legend-color" style="background: rgb(34,139,34);"></div>高 (60-79)</div>
-        <div class="legend-item"><div class="legend-color" style="background: rgb(0,100,0);"></div>最適 (80-100)</div>
-      </div>
-    </div>
-  </div>
-
+<div class="header">
+  <h1>全国 陸上風力発電ポテンシャルマップ</h1>
+  <span class="subtitle">GIS-MCDA (AHP)</span>
+  <span class="badge" id="count-badge">0 / 60</span>
 </div>
 
-<footer>
-  PWS Lab / 福井大学 &mdash; japan-we-potential
-</footer>
+<div class="layout">
+
+  <!-- Sidebar -->
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-search">
+      <input type="text" id="search" placeholder="都道府県を検索...">
+    </div>
+    <div id="pref-list"></div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="info-bar">
+      <span class="pref-name" id="current-pref">都道府県を選択してください</span>
+      <div class="legend">
+        <span class="legend-chip"><span class="swatch" style="background:rgb(220,20,60)"></span>不適</span>
+        <span class="legend-chip"><span class="swatch" style="background:rgb(255,140,0)"></span>低</span>
+        <span class="legend-chip"><span class="swatch" style="background:rgb(218,165,32)"></span>中</span>
+        <span class="legend-chip"><span class="swatch" style="background:rgb(34,139,34)"></span>高</span>
+        <span class="legend-chip"><span class="swatch" style="background:rgb(0,100,0)"></span>最適</span>
+      </div>
+    </div>
+
+    <div class="tabs" id="tabs">
+      <div class="tab active" data-layer="total">総合スコア</div>
+      <div class="tab" data-layer="wind_speed">風速</div>
+      <div class="tab" data-layer="slope">傾斜</div>
+      <div class="tab" data-layer="elevation">標高</div>
+      <div class="tab" data-layer="grid_dist">送電線距離</div>
+      <div class="tab" data-layer="sub_dist">変電所距離</div>
+      <div class="tab" data-layer="land_use">土地利用</div>
+      <div class="tab" data-layer="residential_dist">居住地距離</div>
+      <div class="tab" data-layer="info">AHP基準</div>
+    </div>
+
+    <div class="map-frame" id="map-frame">
+      <div class="placeholder" id="placeholder">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 1118 0z"/>
+          <circle cx="12" cy="10" r="3"/>
+        </svg>
+        左のサイドバーから都道府県を選択
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AHP info panel (hidden, shown via tab) -->
+<div id="ahp-panel" style="display:none; padding:2rem; overflow-y:auto; height:100%; background:white;">
+  <h2 style="margin-bottom:1rem; color:#263238;">AHP 評価基準 (陸上風力)</h2>
+  <table style="width:100%; max-width:700px; border-collapse:collapse;">
+    <tr style="background:#e3f2fd;"><th style="padding:0.5rem; text-align:left;">基準</th><th style="padding:0.5rem;">重み</th><th style="padding:0.5rem; text-align:left;">データソース</th><th style="padding:0.5rem; text-align:left;">スコアリング</th></tr>
+    <tr><td style="padding:0.4rem;">風速 (100m高さ)</td><td style="text-align:center;">30%</td><td>ERA5 再解析</td><td>&lt;4 m/s=0, 7-8=90, &gt;8=100</td></tr>
+    <tr style="background:#f5f5f5;"><td style="padding:0.4rem;">送電線距離 (154kV+)</td><td style="text-align:center;">15%</td><td>All-Japan-Grid</td><td>0m=100, 5km=50, 20km=0</td></tr>
+    <tr><td style="padding:0.4rem;">傾斜</td><td style="text-align:center;">12%</td><td>SRTM 30m DEM</td><td>&lt;5&deg;=100, 20-30&deg;=10, &gt;30&deg;=0</td></tr>
+    <tr style="background:#f5f5f5;"><td style="padding:0.4rem;">変電所距離 (66kV+)</td><td style="text-align:center;">10%</td><td>All-Japan-Grid</td><td>0m=100, 5km=50, 20km=0</td></tr>
+    <tr><td style="padding:0.4rem;">土地利用</td><td style="text-align:center;">10%</td><td>OpenStreetMap</td><td>建物=0, 森林=20, 農地=60, 荒地=90</td></tr>
+    <tr style="background:#f5f5f5;"><td style="padding:0.4rem;">居住地距離</td><td style="text-align:center;">8%</td><td>OpenStreetMap</td><td>&lt;500m=0(排除), 1-2km=70, &gt;3km=100</td></tr>
+    <tr><td style="padding:0.4rem;">標高</td><td style="text-align:center;">5%</td><td>SRTM 30m DEM</td><td>500-1000m=100(最適), &gt;2000m=10</td></tr>
+    <tr style="background:#f5f5f5;"><td style="padding:0.4rem;">道路距離</td><td style="text-align:center;">5%</td><td>-</td><td>デフォルト 50</td></tr>
+    <tr><td style="padding:0.4rem;">保護区域</td><td style="text-align:center;">5%</td><td>-</td><td>デフォルト 80</td></tr>
+  </table>
+  <h3 style="margin-top:1.5rem; margin-bottom:0.5rem; color:#263238;">参考文献</h3>
+  <ul style="font-size:0.85rem; color:#546e7a; padding-left:1.5rem;">
+    <li>Villacreses et al. (2017) — Wind farms suitability location using GIS-MCDA methodology</li>
+    <li>Ayodele et al. (2018) — GIS-based wind farm site selection using AHP</li>
+    <li>Al Garni & Awasthi (2017) — GIS-AHP solar/wind site selection methodology</li>
+  </ul>
+</div>
 
 <script>
-const prefectures = [
-  {id: "hokkaido_ishikari", name: "北海道（石狩）"},
-  {id: "hokkaido_sorachi", name: "北海道（空知）"},
-  {id: "hokkaido_shiribeshi", name: "北海道（後志）"},
-  {id: "hokkaido_iburi", name: "北海道（胆振）"},
-  {id: "hokkaido_hidaka", name: "北海道（日高）"},
-  {id: "hokkaido_oshima", name: "北海道（渡島）"},
-  {id: "hokkaido_hiyama", name: "北海道（檜山）"},
-  {id: "hokkaido_kamikawa", name: "北海道（上川）"},
-  {id: "hokkaido_rumoi", name: "北海道（留萌）"},
-  {id: "hokkaido_soya", name: "北海道（宗谷）"},
-  {id: "hokkaido_okhotsk", name: "北海道（オホーツク）"},
-  {id: "hokkaido_tokachi", name: "北海道（十勝）"},
-  {id: "hokkaido_kushiro", name: "北海道（釧路）"},
-  {id: "hokkaido_nemuro", name: "北海道（根室）"},
-  {id: "aomori", name: "青森県"},
-  {id: "iwate", name: "岩手県"},
-  {id: "miyagi", name: "宮城県"},
-  {id: "akita", name: "秋田県"},
-  {id: "yamagata", name: "山形県"},
-  {id: "fukushima", name: "福島県"},
-  {id: "ibaraki", name: "茨城県"},
-  {id: "tochigi", name: "栃木県"},
-  {id: "gunma", name: "群馬県"},
-  {id: "saitama", name: "埼玉県"},
-  {id: "chiba", name: "千葉県"},
-  {id: "tokyo", name: "東京都"},
-  {id: "kanagawa", name: "神奈川県"},
-  {id: "niigata", name: "新潟県"},
-  {id: "toyama", name: "富山県"},
-  {id: "ishikawa", name: "石川県"},
-  {id: "fukui", name: "福井県"},
-  {id: "yamanashi", name: "山梨県"},
-  {id: "nagano", name: "長野県"},
-  {id: "gifu", name: "岐阜県"},
-  {id: "shizuoka", name: "静岡県"},
-  {id: "aichi", name: "愛知県"},
-  {id: "mie", name: "三重県"},
-  {id: "shiga", name: "滋賀県"},
-  {id: "kyoto", name: "京都府"},
-  {id: "osaka", name: "大阪府"},
-  {id: "hyogo", name: "兵庫県"},
-  {id: "nara", name: "奈良県"},
-  {id: "wakayama", name: "和歌山県"},
-  {id: "tottori", name: "鳥取県"},
-  {id: "shimane", name: "島根県"},
-  {id: "okayama", name: "岡山県"},
-  {id: "hiroshima", name: "広島県"},
-  {id: "yamaguchi", name: "山口県"},
-  {id: "tokushima", name: "徳島県"},
-  {id: "kagawa", name: "香川県"},
-  {id: "ehime", name: "愛媛県"},
-  {id: "kochi", name: "高知県"},
-  {id: "fukuoka", name: "福岡県"},
-  {id: "saga", name: "佐賀県"},
-  {id: "nagasaki", name: "長崎県"},
-  {id: "kumamoto", name: "熊本県"},
-  {id: "oita", name: "大分県"},
-  {id: "miyazaki", name: "宮崎県"},
-  {id: "kagoshima", name: "鹿児島県"},
-  {id: "okinawa", name: "沖縄県"},
+const REGIONS = [
+  { name: "北海道", prefs: [
+    {id:"hokkaido_ishikari",name:"石狩"},{id:"hokkaido_sorachi",name:"空知"},
+    {id:"hokkaido_shiribeshi",name:"後志"},{id:"hokkaido_iburi",name:"胆振"},
+    {id:"hokkaido_hidaka",name:"日高"},{id:"hokkaido_oshima",name:"渡島"},
+    {id:"hokkaido_hiyama",name:"檜山"},{id:"hokkaido_kamikawa",name:"上川"},
+    {id:"hokkaido_rumoi",name:"留萌"},{id:"hokkaido_soya",name:"宗谷"},
+    {id:"hokkaido_okhotsk",name:"オホーツク"},{id:"hokkaido_tokachi",name:"十勝"},
+    {id:"hokkaido_kushiro",name:"釧路"},{id:"hokkaido_nemuro",name:"根室"},
+  ]},
+  { name: "東北", prefs: [
+    {id:"aomori",name:"青森県"},{id:"iwate",name:"岩手県"},{id:"miyagi",name:"宮城県"},
+    {id:"akita",name:"秋田県"},{id:"yamagata",name:"山形県"},{id:"fukushima",name:"福島県"},
+  ]},
+  { name: "関東", prefs: [
+    {id:"ibaraki",name:"茨城県"},{id:"tochigi",name:"栃木県"},{id:"gunma",name:"群馬県"},
+    {id:"saitama",name:"埼玉県"},{id:"chiba",name:"千葉県"},{id:"tokyo",name:"東京都"},
+    {id:"kanagawa",name:"神奈川県"},
+  ]},
+  { name: "中部", prefs: [
+    {id:"niigata",name:"新潟県"},{id:"toyama",name:"富山県"},{id:"ishikawa",name:"石川県"},
+    {id:"fukui",name:"福井県"},{id:"yamanashi",name:"山梨県"},{id:"nagano",name:"長野県"},
+    {id:"gifu",name:"岐阜県"},{id:"shizuoka",name:"静岡県"},{id:"aichi",name:"愛知県"},
+  ]},
+  { name: "近畿", prefs: [
+    {id:"mie",name:"三重県"},{id:"shiga",name:"滋賀県"},{id:"kyoto",name:"京都府"},
+    {id:"osaka",name:"大阪府"},{id:"hyogo",name:"兵庫県"},{id:"nara",name:"奈良県"},
+    {id:"wakayama",name:"和歌山県"},
+  ]},
+  { name: "中国", prefs: [
+    {id:"tottori",name:"鳥取県"},{id:"shimane",name:"島根県"},{id:"okayama",name:"岡山県"},
+    {id:"hiroshima",name:"広島県"},{id:"yamaguchi",name:"山口県"},
+  ]},
+  { name: "四国", prefs: [
+    {id:"tokushima",name:"徳島県"},{id:"kagawa",name:"香川県"},
+    {id:"ehime",name:"愛媛県"},{id:"kochi",name:"高知県"},
+  ]},
+  { name: "九州・沖縄", prefs: [
+    {id:"fukuoka",name:"福岡県"},{id:"saga",name:"佐賀県"},{id:"nagasaki",name:"長崎県"},
+    {id:"kumamoto",name:"熊本県"},{id:"oita",name:"大分県"},{id:"miyazaki",name:"宮崎県"},
+    {id:"kagoshima",name:"鹿児島県"},{id:"okinawa",name:"沖縄県"},
+  ]},
 ];
 
-const grid = document.getElementById('pref-grid');
-prefectures.forEach(p => {
-  const a = document.createElement('a');
-  a.className = 'pref-link';
-  a.href = `${p.id}/wind_potential_map.html`;
-  a.innerHTML = `${p.name}<br><span class="status">wind_potential_map.html</span>`;
-  grid.appendChild(a);
+let currentPref = null;
+let currentLayer = 'total';
+const readySet = new Set();
+
+// Check which prefectures have maps
+async function checkReady() {
+  const all = REGIONS.flatMap(r => r.prefs);
+  const checks = all.map(async p => {
+    try {
+      const res = await fetch(`${p.id}/wind_potential_map.html`, {method:'HEAD'});
+      if (res.ok) readySet.add(p.id);
+    } catch {}
+  });
+  await Promise.all(checks);
+  document.getElementById('count-badge').textContent = `${readySet.size} / ${all.length}`;
+  // Update dots
+  document.querySelectorAll('.pref-item').forEach(el => {
+    const dot = el.querySelector('.dot');
+    if (readySet.has(el.dataset.id)) { dot.classList.add('ready'); dot.classList.remove('pending'); }
+  });
+}
+
+// Build sidebar
+function buildSidebar() {
+  const container = document.getElementById('pref-list');
+  REGIONS.forEach(region => {
+    const group = document.createElement('div');
+    group.className = 'region-group';
+
+    const label = document.createElement('div');
+    label.className = 'region-label';
+    label.innerHTML = `<span class="arrow">&#9660;</span>${region.name} (${region.prefs.length})`;
+
+    const items = document.createElement('div');
+    items.className = 'region-items';
+
+    region.prefs.forEach(p => {
+      const item = document.createElement('div');
+      item.className = 'pref-item';
+      item.dataset.id = p.id;
+      item.innerHTML = `<span class="dot pending"></span>${p.name}`;
+      item.addEventListener('click', () => selectPref(p.id, p.name));
+      items.appendChild(item);
+    });
+
+    label.addEventListener('click', () => {
+      items.classList.toggle('hidden');
+      label.classList.toggle('collapsed');
+    });
+
+    group.appendChild(label);
+    group.appendChild(items);
+    container.appendChild(group);
+  });
+}
+
+function selectPref(id, name) {
+  currentPref = id;
+  // Update active state
+  document.querySelectorAll('.pref-item').forEach(el => el.classList.remove('active'));
+  const active = document.querySelector(`.pref-item[data-id="${id}"]`);
+  if (active) active.classList.add('active');
+
+  // Show full name
+  const region = REGIONS.find(r => r.prefs.some(p => p.id === id));
+  const displayName = id.startsWith('hokkaido_') ? `北海道（${name}）` : name;
+  document.getElementById('current-pref').textContent = displayName;
+
+  loadLayer();
+}
+
+function loadLayer() {
+  if (!currentPref) return;
+  const frame = document.getElementById('map-frame');
+  const placeholder = document.getElementById('placeholder');
+  const ahp = document.getElementById('ahp-panel');
+
+  if (currentLayer === 'info') {
+    // Show AHP info
+    frame.innerHTML = '';
+    const panel = ahp.cloneNode(true);
+    panel.style.display = 'block';
+    frame.appendChild(panel);
+    return;
+  }
+
+  const url = `${currentPref}/wind_potential_map.html`;
+  if (readySet.has(currentPref)) {
+    placeholder && placeholder.remove();
+    frame.innerHTML = `<iframe src="${url}"></iframe>`;
+  } else {
+    frame.innerHTML = `<div class="placeholder">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+      </svg>
+      このエリアはまだ処理中です
+    </div>`;
+  }
+}
+
+// Tabs
+document.getElementById('tabs').addEventListener('click', e => {
+  const tab = e.target.closest('.tab');
+  if (!tab) return;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  tab.classList.add('active');
+  currentLayer = tab.dataset.layer;
+  loadLayer();
 });
+
+// Search
+document.getElementById('search').addEventListener('input', e => {
+  const q = e.target.value.toLowerCase();
+  document.querySelectorAll('.pref-item').forEach(el => {
+    const match = el.textContent.toLowerCase().includes(q) || el.dataset.id.includes(q);
+    el.style.display = match ? '' : 'none';
+  });
+  // Expand all region groups when searching
+  if (q) {
+    document.querySelectorAll('.region-items').forEach(r => r.classList.remove('hidden'));
+    document.querySelectorAll('.region-label').forEach(l => l.classList.remove('collapsed'));
+  }
+});
+
+// Init
+buildSidebar();
+checkReady();
+
+// Auto-select fukui if ready
+setTimeout(() => {
+  if (readySet.has('fukui')) selectPref('fukui', '福井県');
+}, 500);
 </script>
 
 </body>

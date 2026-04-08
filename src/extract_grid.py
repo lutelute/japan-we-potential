@@ -96,15 +96,22 @@ def main():
 
     subs = load_area_geojson(grid_area, "substations")
     lines = load_area_geojson(grid_area, "lines")
-    plants = load_area_geojson(grid_area, "plants")
+
+    # plants は無くてもOK (九州・沖縄等)
+    plants_path = ALL_JAPAN_GRID / f"{grid_area}_plants.geojson"
+    if plants_path.exists():
+        plants = load_area_geojson(grid_area, "plants")
+        plants = plants[plants["name"].notna() & (plants["name"] != "")]
+    else:
+        print(f"  WARNING: {grid_area}_plants.geojson not found, skipping")
+        plants = gpd.GeoDataFrame()
 
     # 名前なしを除外
     subs = subs[subs["name"].notna() & (subs["name"] != "")]
-    plants = plants[plants["name"].notna() & (plants["name"] != "")]
 
     subs_f = filter_by_bbox(subs, bbox_tuple, name_ja)
     lines_f = filter_by_bbox(lines, bbox_tuple, name_ja)
-    plants_f = filter_by_bbox(plants, bbox_tuple, name_ja)
+    plants_f = filter_by_bbox(plants, bbox_tuple, name_ja) if len(plants) > 0 else plants
 
     if "voltage" in subs_f.columns:
         subs_f["voltage_kv"] = subs_f["voltage"].apply(extract_voltage_kv)
@@ -118,7 +125,8 @@ def main():
     grid_dir.mkdir(parents=True, exist_ok=True)
     subs_f.to_file(grid_dir / f"{pref}_substations.geojson", driver="GeoJSON")
     lines_f.to_file(grid_dir / f"{pref}_lines.geojson", driver="GeoJSON")
-    plants_f.to_file(grid_dir / f"{pref}_plants.geojson", driver="GeoJSON")
+    if len(plants_f) > 0:
+        plants_f.to_file(grid_dir / f"{pref}_plants.geojson", driver="GeoJSON")
     print(f"\n完了!")
 
 
