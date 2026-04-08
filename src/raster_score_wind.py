@@ -160,16 +160,19 @@ def compute_score_wind_speed(pref: str, transform, width, height, crs) -> np.nda
                            resampling=Resampling.bilinear)
     ws = np.nan_to_num(ws, nan=0.0)
 
-    # 風速スコアリング (年間平均, 100m高さ)
+    # 風速スコアリング (ERA5 0.25°格子の年間平均, 100m高さ)
+    # ERA5は空間平均のた��実測より低い (日本域: 1-5 m/s)
+    # 地形加��係数を考慮し、ERA5値��ースでスコアリング
     score = np.zeros((height, width), dtype=np.uint8)
-    score[ws < 4.0] = 0       # 経済的に不可
-    score[(ws >= 4.0) & (ws < 5.0)] = 20
-    score[(ws >= 5.0) & (ws < 5.5)] = 40
-    score[(ws >= 5.5) & (ws < 6.0)] = 55
-    score[(ws >= 6.0) & (ws < 6.5)] = 70
-    score[(ws >= 6.5) & (ws < 7.0)] = 80
-    score[(ws >= 7.0) & (ws < 8.0)] = 90
-    score[ws >= 8.0] = 100
+    score[ws < 1.5] = 0       # 内陸盆地・遮蔽域
+    score[(ws >= 1.5) & (ws < 2.0)] = 15
+    score[(ws >= 2.0) & (ws < 2.5)] = 30
+    score[(ws >= 2.5) & (ws < 3.0)] = 45
+    score[(ws >= 3.0) & (ws < 3.5)] = 60
+    score[(ws >= 3.5) & (ws < 4.0)] = 75
+    score[(ws >= 4.0) & (ws < 4.5)] = 85
+    score[(ws >= 4.5) & (ws < 5.0)] = 95
+    score[ws >= 5.0] = 100     # 沿岸・高地・沖縄
 
     return score
 
