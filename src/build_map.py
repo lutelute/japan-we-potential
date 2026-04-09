@@ -81,7 +81,7 @@ def generate_pref_pngs(docs_dir: Path, prefs: list[str]):
             continue
 
         png_path = docs_dir / f"{pref}.png"
-        _tif_to_png(rgba_tif, png_path)
+        _tif_to_png(rgba_tif, png_path, max_dim=2000)
 
         pref_dir = docs_dir / pref
         pref_dir.mkdir(parents=True, exist_ok=True)
@@ -89,13 +89,13 @@ def generate_pref_pngs(docs_dir: Path, prefs: list[str]):
             src = output_dir / f"score_{stype}_rgba.tif"
             dst = pref_dir / f"score_{stype}.png"
             if src.exists():
-                _tif_to_png(src, dst)
+                _tif_to_png(src, dst, max_dim=2000)
 
     log.info("Prefecture PNGs: %d done", len(prefs))
 
 
-def _tif_to_png(tif_path: Path, png_path: Path):
-    """RGBA GeoTIFF → PNG (原寸)。"""
+def _tif_to_png(tif_path: Path, png_path: Path, max_dim: int = 2000):
+    """RGBA GeoTIFF → PNG (max_dim上限リサイズ, japan-re-potential準拠)。"""
     from PIL import Image
 
     with rasterio.open(tif_path) as ds:
@@ -103,6 +103,14 @@ def _tif_to_png(tif_path: Path, png_path: Path):
 
     img = np.moveaxis(rgba, 0, -1)
     pil_img = Image.fromarray(img, "RGBA")
+
+    if max_dim > 0 and max(pil_img.size) > max_dim:
+        ratio = max_dim / max(pil_img.size)
+        pil_img = pil_img.resize(
+            (int(pil_img.width * ratio), int(pil_img.height * ratio)),
+            Image.LANCZOS,
+        )
+
     png_path.parent.mkdir(parents=True, exist_ok=True)
     pil_img.save(png_path, optimize=True)
 
