@@ -157,22 +157,13 @@ def compute_score_wind_speed(pref: str, transform, width, height, crs) -> np.nda
         return np.full((height, width), 50, dtype=np.uint8)
 
     ws = _resample_to_grid(wind_path, transform, width, height, crs,
-                           resampling=Resampling.bilinear)
+                           resampling=Resampling.cubic)
     ws = np.nan_to_num(ws, nan=0.0)
 
-    # 風速スコアリング (ERA5 0.25°格子の年間平均, 100m高さ)
-    # ERA5は空間平均のた��実測より低い (日本域: 1-5 m/s)
-    # 地形加��係数を考慮し、ERA5値��ースでスコアリング
-    score = np.zeros((height, width), dtype=np.uint8)
-    score[ws < 1.5] = 0       # 内陸盆地・遮蔽域
-    score[(ws >= 1.5) & (ws < 2.0)] = 15
-    score[(ws >= 2.0) & (ws < 2.5)] = 30
-    score[(ws >= 2.5) & (ws < 3.0)] = 45
-    score[(ws >= 3.0) & (ws < 3.5)] = 60
-    score[(ws >= 3.5) & (ws < 4.0)] = 75
-    score[(ws >= 4.0) & (ws < 4.5)] = 85
-    score[(ws >= 4.5) & (ws < 5.0)] = 95
-    score[ws >= 5.0] = 100     # 沿岸・高地・沖縄
+    # 風速スコアリング (ERA5 0.25°格子 → 連続線形補間)
+    # ERA5は空間平均のため実測より低い (日本域: 1-5 m/s)
+    # 1.5 m/s 以下 = 0, 5.0 m/s 以上 = 100, 間は線形
+    score = np.interp(ws, [1.5, 5.0], [0, 100]).astype(np.uint8)
 
     return score
 
