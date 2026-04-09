@@ -46,14 +46,18 @@ GRID_AREAS = ["hokkaido", "tohoku", "tokyo", "chubu", "hokuriku",
 
 # ── 1. prefectures.json ────────────────────────────────────
 def generate_prefectures_json(docs_dir: Path, prefs: list[str]):
-    """config.py bboxからprefectures.jsonを生成。
-    TIF boundsはSRTMタイル単位で大きいので、config bboxを使う。
-    """
+    """TIF boundsからprefectures.jsonを生成。PNGもTIF原寸なのでboundsを一致させる。"""
     data = {}
     for pref in prefs:
         cfg = PREFECTURES[pref]
-        bbox = cfg["bbox"]  # (west, south, east, north)
-        bounds = [[bbox[1], bbox[0]], [bbox[3], bbox[2]]]
+        tif = PROJECT_ROOT / "output" / pref / "score_total_rgba.tif"
+        if tif.exists():
+            with rasterio.open(tif) as ds:
+                b = ds.bounds
+            bounds = [[b.bottom, b.left], [b.top, b.right]]
+        else:
+            bbox = cfg["bbox"]
+            bounds = [[bbox[1], bbox[0]], [bbox[3], bbox[2]]]
 
         data[pref] = {
             "name_ja": cfg["name_ja"],
@@ -69,20 +73,15 @@ def generate_prefectures_json(docs_dir: Path, prefs: list[str]):
 
 # ── 2. 県別PNG (原寸) ──────────────────────────────────────
 def generate_pref_pngs(docs_dir: Path, prefs: list[str]):
-    """各県の score_total_rgba.tif → {pref}.png (config bboxでクリップ)。"""
-    from PIL import Image
-
+    """各県の score_total_rgba.tif → {pref}.png (TIF原寸, クリップなし)。"""
     for pref in prefs:
         output_dir = PROJECT_ROOT / "output" / pref
         rgba_tif = output_dir / "score_total_rgba.tif"
         if not rgba_tif.exists():
             continue
 
-        cfg = PREFECTURES[pref]
-        bbox = cfg["bbox"]  # (west, south, east, north)
-
         png_path = docs_dir / f"{pref}.png"
-        _tif_to_png(rgba_tif, png_path, clip_bbox=bbox)
+        _tif_to_png(rgba_tif, png_path)
 
         pref_dir = docs_dir / pref
         pref_dir.mkdir(parents=True, exist_ok=True)
@@ -90,42 +89,20 @@ def generate_pref_pngs(docs_dir: Path, prefs: list[str]):
             src = output_dir / f"score_{stype}_rgba.tif"
             dst = pref_dir / f"score_{stype}.png"
             if src.exists():
-                _tif_to_png(src, dst, clip_bbox=bbox)
+                _tif_to_png(src, dst)
 
     log.info("Prefecture PNGs: %d done", len(prefs))
 
 
-def _tif_to_png(tif_path: Path, png_path: Path, max_dim: int = 0,
-                clip_bbox: tuple = None):
-    """RGBA GeoTIFF → PNG。clip_bboxでピクセル範囲をクリップ。"""
+def _tif_to_png(tif_path: Path, png_path: Path):
+    """RGBA GeoTIFF → PNG (原寸)。"""
     from PIL import Image
-    from rasterio.windows import from_bounds
 
     with rasterio.open(tif_path) as ds:
-        if clip_bbox:
-            west, south, east, north = clip_bbox
-            window = from_bounds(west, south, east, north, ds.transform)
-            # 整数ピクセルに丸める
-            row_off = max(0, int(window.row_off))
-            col_off = max(0, int(window.col_off))
-            win_h = min(int(window.height), ds.height - row_off)
-            win_w = min(int(window.width), ds.width - col_off)
-            from rasterio.windows import Window
-            window = Window(col_off, row_off, win_w, win_h)
-            rgba = ds.read(window=window)
-        else:
-            rgba = ds.read()
+        rgba = ds.read()
 
     img = np.moveaxis(rgba, 0, -1)
     pil_img = Image.fromarray(img, "RGBA")
-
-    if max_dim > 0 and max(pil_img.size) > max_dim:
-        ratio = max_dim / max(pil_img.size)
-        pil_img = pil_img.resize(
-            (int(pil_img.width * ratio), int(pil_img.height * ratio)),
-            Image.LANCZOS,
-        )
-
     png_path.parent.mkdir(parents=True, exist_ok=True)
     pil_img.save(png_path, optimize=True)
 
