@@ -190,6 +190,16 @@ const gridAreaFiles = [
   'hokkaido','tohoku','tokyo','chubu','hokuriku','kansai','chugoku','shikoku','kyushu','okinawa'
 ];
 
+function toKv(f){
+  // voltage_kv があればそのまま、なければ voltage (V単位文字列) から変換
+  let v = f.properties.voltage_kv;
+  if(v && v > 0) return v;
+  const raw = f.properties.voltage;
+  if(!raw) return 0;
+  v = parseFloat(String(raw).replace(/,/g,''));
+  return v > 1000 ? v/1000 : v;
+}
+
 function vColor(v){
   if(v>=500)return'#cc0000';
   if(v>=275)return'#e65100';
@@ -285,10 +295,10 @@ async function loadGridForArea(area){
       const r=await fetch(`grid/${a}_lines.geojson`);
       const d=await r.json();
       const ly=L.geoJSON(d,{
-        style:f=>{const v=f.properties.voltage_kv||0;
+        style:f=>{const v=toKv(f);
           return{color:vColor(v),weight:v>=500?5:v>=275?4:v>=220?3.5:v>=154?3:v>=110?2.5:v>=66?2:1.5,opacity:0.7};},
         onEachFeature:(f,l)=>{
-          const n=f.properties.name||'';const v=f.properties.voltage_kv||0;
+          const n=f.properties.name||'';const v=toKv(f);
           if(n){
             l.bindTooltip(`${n} (${v}kV)`,{sticky:true});
             linesListData.push({name:n,v,area:a,layer:l});
@@ -304,7 +314,7 @@ async function loadGridForArea(area){
       const d=await r.json();
       const ly=L.layerGroup();
       d.features.forEach(f=>{
-        const v=f.properties.voltage_kv||0;
+        const v=toKv(f);
         const n=f.properties.name||'';
         let lat,lon;const g=f.geometry;
         if(g.type==='Point'){lon=g.coordinates[0];lat=g.coordinates[1];}
@@ -428,8 +438,8 @@ async function init(){
     prefData=await r.json();
     updatePrefSelect('all');
     loadScoreForArea('all');
-    await loadGridForArea('all');
-    // パン/ズーム時に表示範囲内の県をlazy load
+    // 全国表示時はグリッドをロードしない (重いため)
+    // エリア選択時にロード
     map.on('moveend',()=>{ if(currentArea==='all') loadVisiblePrefs(); });
   }catch(e){
     console.error('Init error:',e);

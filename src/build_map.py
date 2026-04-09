@@ -95,7 +95,9 @@ def generate_pref_pngs(docs_dir: Path, prefs: list[str]):
 
 
 def _tif_to_png(tif_path: Path, png_path: Path, max_dim: int = 2000):
-    """RGBA GeoTIFF → PNG (max_dim上限リサイズ, japan-re-potential準拠)。"""
+    """RGBA GeoTIFF → PNG (max_dim上限リサイズ)。
+    リサイズ後にアルファを二値化 (0 or 255) して境界のにじみを防止。
+    """
     from PIL import Image
 
     with rasterio.open(tif_path) as ds:
@@ -110,6 +112,10 @@ def _tif_to_png(tif_path: Path, png_path: Path, max_dim: int = 2000):
             (int(pil_img.width * ratio), int(pil_img.height * ratio)),
             Image.LANCZOS,
         )
+        # LANCZOS補間でアルファが中間値になるので二値化
+        arr = np.array(pil_img)
+        arr[:, :, 3] = np.where(arr[:, :, 3] >= 128, 255, 0)
+        pil_img = Image.fromarray(arr, "RGBA")
 
     png_path.parent.mkdir(parents=True, exist_ok=True)
     pil_img.save(png_path, optimize=True)
