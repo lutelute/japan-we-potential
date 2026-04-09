@@ -203,32 +203,52 @@ function vColor(v){
 
 function showLoading(v){document.getElementById('loading').style.display=v?'block':'none';}
 
-// ── スコアレイヤー ──────────────────────────────────
+// ── スコアレイヤー (viewport-based lazy loading) ─────
 function clearScoreLayers(){
   scoreLayers.forEach(l=>map.removeLayer(l));
   scoreLayers=[];
+  loadedPrefs.clear();
 }
+const loadedPrefs = new Set();
 
 function getScorePng(key, mode){
   if(mode==='total') return key+'.png';
   return key+'/score_'+mode+'.png';
 }
 
+function prefInView(d){
+  const mb=map.getBounds();
+  return mb.intersects(d.bounds);
+}
+
 function loadScoreForPref(key){
+  if(loadedPrefs.has(key))return;
   const d=prefData[key];
   if(!d)return;
   const png = getScorePng(key, currentScoreMode);
   const ly=L.imageOverlay(png, d.bounds, {opacity:scoreOpacity, pane:'score'});
-  ly.addTo(map);
+  if(document.getElementById('chkScore').checked) ly.addTo(map);
   ly._prefKey=key;
   scoreLayers.push(ly);
+  loadedPrefs.add(key);
+}
+
+function loadVisiblePrefs(){
+  if(!document.getElementById('chkScore').checked)return;
+  for(const [key,d] of Object.entries(prefData)){
+    if(currentArea!=='all' && d.grid_area!==currentArea) continue;
+    if(prefInView(d)) loadScoreForPref(key);
+  }
 }
 
 function loadScoreForArea(area){
   clearScoreLayers();
-  for(const [key,d] of Object.entries(prefData)){
-    if(area==='all'||d.grid_area===area){
-      loadScoreForPref(key);
+  if(area==='all'){
+    // lazy: 表示範囲内のみロード
+    loadVisiblePrefs();
+  } else {
+    for(const [key,d] of Object.entries(prefData)){
+      if(d.grid_area===area) loadScoreForPref(key);
     }
   }
 }
@@ -236,6 +256,7 @@ function loadScoreForArea(area){
 function toggleScoreLayer(){
   const on=document.getElementById('chkScore').checked;
   scoreLayers.forEach(l=>{if(on)l.addTo(map);else map.removeLayer(l);});
+  if(on) loadVisiblePrefs();
 }
 
 function setOpacity(val){
@@ -408,6 +429,8 @@ async function init(){
     updatePrefSelect('all');
     loadScoreForArea('all');
     await loadGridForArea('all');
+    // パン/ズーム時に表示範囲内の県をlazy load
+    map.on('moveend',()=>{ if(currentArea==='all') loadVisiblePrefs(); });
   }catch(e){
     console.error('Init error:',e);
   }
