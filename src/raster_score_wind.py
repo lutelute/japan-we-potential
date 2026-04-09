@@ -42,12 +42,14 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 # ── カラーマップ (スコア -> RGBA) ────────────────────────────
+# alpha=255 (不透明) — 透過度はLeaflet側のopacityで制御
+# スコア0は alpha=0 (完全透明) で県外マスクとして機能
 COLOUR_BANDS = [
-    ((1, 20), (220, 20, 60, 180)),     # crimson
-    ((20, 40), (255, 140, 0, 180)),     # darkorange
-    ((40, 60), (218, 165, 32, 180)),    # goldenrod
-    ((60, 80), (34, 139, 34, 180)),     # forestgreen
-    ((80, 101), (0, 100, 0, 180)),      # darkgreen
+    ((1, 20), (220, 20, 60, 255)),     # crimson
+    ((20, 40), (255, 140, 0, 255)),     # darkorange
+    ((40, 60), (218, 165, 32, 255)),    # goldenrod
+    ((60, 80), (34, 139, 34, 255)),     # forestgreen
+    ((80, 101), (0, 100, 0, 255)),      # darkgreen
 ]
 
 
