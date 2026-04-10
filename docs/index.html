@@ -222,8 +222,8 @@ function clearScoreLayers(){
 const loadedPrefs = new Set();
 
 function getScorePng(key, mode){
-  if(mode==='total') return key+'.png';
-  return key+'/score_'+mode+'.png';
+  // 現在はtotal PNGのみ (スコア別PNGはリポジトリサイズ削減のため未配置)
+  return key+'.png';
 }
 
 function prefInView(d){
