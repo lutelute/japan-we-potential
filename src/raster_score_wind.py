@@ -16,6 +16,7 @@ Usage:
 
 import argparse
 import logging
+import math
 import shutil
 import subprocess
 import sys
@@ -24,15 +25,37 @@ from pathlib import Path
 import geopandas as gpd
 import numpy as np
 import rasterio
+from rasterio.coords import BoundingBox
 from rasterio.enums import Resampling
 from rasterio.features import geometry_mask, rasterize
 from rasterio.merge import merge
-from rasterio.transform import from_bounds
+from rasterio.transform import Affine, from_bounds
 from rasterio.warp import reproject
 from scipy.ndimage import distance_transform_edt
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from config import PREFECTURES, WEIGHTS, PROJECT_ROOT
+
+# 北海道14振興局マップ: N03_002 列の振興局名
+# 振興局の admin_boundary は単一の `N03-20240101_01.shp` (全道) 内で
+# N03_002 列により区別されるため、県ごとにフィルタが必要。
+# これを怠ると全14振興局が「北海道全域」をマスクとして使い、PNG 同士が完全重複する。
+HOKKAIDO_SUBPREF = {
+    "hokkaido_ishikari":   "石狩振興局",
+    "hokkaido_sorachi":    "空知総合振興局",
+    "hokkaido_shiribeshi": "後志総合振興局",
+    "hokkaido_iburi":      "胆振総合振興局",
+    "hokkaido_hidaka":     "日高振興局",
+    "hokkaido_oshima":     "渡島総合振興局",
+    "hokkaido_hiyama":     "檜山振興局",
+    "hokkaido_kamikawa":   "上川総合振興局",
+    "hokkaido_rumoi":      "留萌振興局",
+    "hokkaido_soya":       "宗谷総合振興局",
+    "hokkaido_okhotsk":    "オホーツク総合振興局",
+    "hokkaido_tokachi":    "十勝総合振興局",
+    "hokkaido_kushiro":    "釧路総合振興局",
+    "hokkaido_nemuro":     "根室振興局",
+}
 
 logging.basicConfig(
     level=logging.INFO,
@@ -66,29 +89,57 @@ def score_to_rgba(score_arr: np.ndarray) -> np.ndarray:
 
 
 # ── リファレンスグリッド ─────────────────────────────────────
+# 全国統一SRTMグリッド: 原点 (lon=0, lat=0)、step = resolution_m / 108000 [deg]
+# すべての県の TIF がこのグローバル格子のサブウィンドウになるため、
+# 隣接県の画素境界が完全一致し、geometry_mask の判定も県をまたいで整合する。
+# 結果として PNG overlay 同士の seam / overlap が原理的に消える。
+#
+# 基準: 30m 解像度 = 1/3600° (SRTM native)
+#       10m 解像度 = 1/10800°
+#       5m 解像度 = 1/21600°
+BASE_RES_M = 30
+BASE_STEPS_PER_DEGREE = 3600  # SRTM native
+
+
+def _unified_grid_transform(bounds, resolution_m: int):
+    """bounds を完全包含する、グローバル SRTM 原点に整列した transform/shape を返す。"""
+    steps_per_degree = BASE_STEPS_PER_DEGREE * (BASE_RES_M / max(resolution_m, 1))
+    res_deg = 1.0 / steps_per_degree  # e.g. 30m -> 1/3600
+
+    col_min = math.floor(bounds.left   * steps_per_degree)
+    col_max = math.ceil (bounds.right  * steps_per_degree)
+    # rasterio の y 軸は上→下 (正値で下方向)。緯度反転してインデックス化
+    row_min = math.floor(-bounds.top    * steps_per_degree)
+    row_max = math.ceil (-bounds.bottom * steps_per_degree)
+
+    ncols = col_max - col_min
+    nrows = row_max - row_min
+    transform = Affine(res_deg, 0.0, col_min * res_deg,
+                       0.0, -res_deg, -row_min * res_deg)
+    snapped = BoundingBox(
+        left=col_min * res_deg,
+        bottom=-row_max * res_deg,
+        right=col_max * res_deg,
+        top=-row_min * res_deg,
+    )
+    return transform, ncols, nrows, snapped
+
+
 def load_reference_grid(pref: str, resolution_m: int = 30):
+    """県の slope.tif の範囲を包含する、SRTM 原点整列の統一グリッドを返す。"""
     slope_path = PROJECT_ROOT / "data" / pref / "land" / f"{pref}_slope.tif"
     with rasterio.open(slope_path) as ds:
-        native_transform = ds.transform
-        native_w, native_h = ds.width, ds.height
+        native_bounds = ds.bounds
         crs = ds.crs
-        bounds = ds.bounds
 
-    native_res_x = abs(native_transform.a)
-    centre_lat = (bounds.top + bounds.bottom) / 2
-    m_per_deg = 111320 * np.cos(np.radians(centre_lat))
-    native_m = native_res_x * m_per_deg
-
-    if resolution_m >= native_m * 0.9:
-        log.info("Using native grid (%d x %d, ~%.0fm)", native_w, native_h, native_m)
-        return native_transform, native_w, native_h, crs, bounds
-
-    scale = native_m / resolution_m
-    new_w = int(np.ceil(native_w * scale))
-    new_h = int(np.ceil(native_h * scale))
-    new_transform = from_bounds(bounds.left, bounds.bottom, bounds.right, bounds.top, new_w, new_h)
-    log.info("Custom grid: %d x %d (~%dm)", new_w, new_h, resolution_m)
-    return new_transform, new_w, new_h, crs, bounds
+    transform, ncols, nrows, snapped = _unified_grid_transform(native_bounds, resolution_m)
+    log.info(
+        "Unified grid @ %dm: %d x %d, origin=(%.10f, %.10f), bounds=L%.6f B%.6f R%.6f T%.6f",
+        resolution_m, ncols, nrows,
+        transform.c, transform.f,
+        snapped.left, snapped.bottom, snapped.right, snapped.top,
+    )
+    return transform, ncols, nrows, crs, snapped
 
 
 def _resample_to_grid(src_path: Path, transform, width, height, crs,
@@ -263,6 +314,15 @@ def compute_score_sub_dist(pref: str, transform, width, height, crs) -> np.ndarr
     return _distance_score(geometries, transform, width, height, crs, breakpoints)
 
 
+# ── OSM src 範囲外判定 (拡張 bbox 対応) ────────────────────
+def _outside_src_bbox(src_bounds, transform, width, height) -> np.ndarray:
+    xs = transform.c + (np.arange(width) + 0.5) * transform.a
+    ys = transform.f + (np.arange(height) + 0.5) * transform.e
+    X, Y = np.meshgrid(xs, ys)
+    return (X < src_bounds.left) | (X > src_bounds.right) | \
+           (Y < src_bounds.bottom) | (Y > src_bounds.top)
+
+
 # ── 土地利用 ────────────────────────────────────────────────
 def compute_score_land_use(pref: str, transform, width, height, crs) -> np.ndarray:
     lu_dir = PROJECT_ROOT / "data" / pref / "land" / "land_use"
@@ -272,6 +332,13 @@ def compute_score_land_use(pref: str, transform, width, height, crs) -> np.ndarr
         log.info("  land_use: using OSM data %s", osm_path)
         score = _resample_to_grid(osm_path, transform, width, height, crs,
                                   resampling=Resampling.nearest)
+        with rasterio.open(osm_path) as ds:
+            src_b = ds.bounds
+        outside = _outside_src_bbox(src_b, transform, width, height)
+        if outside.any():
+            score[outside] = 70
+            log.info("  land_use: %d px outside OSM src bbox → default 70",
+                     int(outside.sum()))
         return score
 
     log.warning("  land_use: no data, using default 70")
@@ -290,6 +357,9 @@ def compute_score_residential_dist(pref: str, transform, width, height, crs) -> 
     log.info("  residential_dist: reading %s", res_path)
     res_mask = _resample_to_grid(res_path, transform, width, height, crs,
                                  resampling=Resampling.nearest)
+    with rasterio.open(res_path) as ds:
+        src_b = ds.bounds
+    outside = _outside_src_bbox(src_b, transform, width, height)
 
     # 居住地ピクセルからの距離を計算
     centre_lat = transform.f - abs(transform.e) * height / 2
@@ -306,6 +376,12 @@ def compute_score_residential_dist(pref: str, transform, width, height, crs) -> 
     score[(dist_m >= 1000) & (dist_m < 2000)] = 70
     score[(dist_m >= 2000) & (dist_m < 3000)] = 90
     score[dist_m >= 3000] = 100
+
+    # OSM src bbox 外は居住地データ欠損 → default 70
+    if outside.any():
+        score[outside] = 70
+        log.info("  residential_dist: %d px outside src bbox → default 70",
+                 int(outside.sum()))
 
     return score
 
@@ -415,13 +491,29 @@ def process_prefecture(pref: str, resolution_m: int = 30, skip_tiles: bool = Fal
     # 県境マスク
     log.info("Masking to prefecture boundary...")
     admin_dir = PROJECT_ROOT / "data" / pref / "land" / "admin_boundary"
-    shp_files = list(admin_dir.rglob("*.shp")) if admin_dir.exists() else []
-    if shp_files:
-        admin = gpd.read_file(shp_files[0])
+
+    # 北海道: 振興局ごとにフィルタ必須 (共通 shp に全14振興局が格納されている)
+    if pref in HOKKAIDO_SUBPREF:
+        subpref_name = HOKKAIDO_SUBPREF[pref]
+        shp_files = sorted(admin_dir.rglob("*_subprefecture.shp")) if admin_dir.exists() else []
+        if not shp_files:
+            shp_files = sorted(admin_dir.rglob("*.shp")) if admin_dir.exists() else []
+        if shp_files:
+            admin = gpd.read_file(shp_files[0])
+            admin = admin[admin["N03_002"] == subpref_name]
+            log.info("  Filtered to subprefecture '%s' (%d rows)", subpref_name, len(admin))
+    else:
+        shp_files = sorted(admin_dir.rglob("*.shp")) if admin_dir.exists() else []
+        # 一般県: subprefecture ファイルは北海道専用なので除外
+        shp_files = [p for p in shp_files if "_subprefecture" not in p.name]
+        admin = gpd.read_file(shp_files[0]) if shp_files else None
+
+    if shp_files and admin is not None and len(admin) > 0:
         boundary_geom = admin.union_all()
         outside_mask = geometry_mask(
             [boundary_geom], transform=transform,
             out_shape=(height, width), invert=False,
+            all_touched=True,
         )
         for name in scores:
             scores[name][outside_mask] = 0

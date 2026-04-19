@@ -162,7 +162,6 @@ const hazardLayers = {
 
 // ── データ ─────────────────────────────────────────
 let prefData = {};
-let scoreLayers = [];
 let gridLayers = { lines: [], subs: [] };
 let currentArea = 'all';
 let currentScoreMode = 'total';
@@ -213,71 +212,40 @@ function vColor(v){
 
 function showLoading(v){document.getElementById('loading').style.display=v?'block':'none';}
 
-// ── スコアレイヤー (viewport-based lazy loading) ─────
-function clearScoreLayers(){
-  scoreLayers.forEach(l=>map.removeLayer(l));
-  scoreLayers=[];
-  loadedPrefs.clear();
-}
-const loadedPrefs = new Set();
+// ── スコアレイヤー (XYZ タイル方式、継ぎ目なし) ─────
+let scoreTileLayer = null;
 
-function getScorePng(key, mode){
-  // 現在はtotal PNGのみ (スコア別PNGはリポジトリサイズ削減のため未配置)
-  return key+'.png';
-}
-
-function prefInView(d){
-  const mb=map.getBounds();
-  return mb.intersects(d.bounds);
-}
-
-function loadScoreForPref(key){
-  if(loadedPrefs.has(key))return;
-  const d=prefData[key];
-  if(!d)return;
-  const png = getScorePng(key, currentScoreMode);
-  const ly=L.imageOverlay(png, d.bounds, {opacity:scoreOpacity, pane:'score'});
-  if(document.getElementById('chkScore').checked) ly.addTo(map);
-  ly._prefKey=key;
-  scoreLayers.push(ly);
-  loadedPrefs.add(key);
-}
-
-function loadVisiblePrefs(){
-  if(!document.getElementById('chkScore').checked)return;
-  for(const [key,d] of Object.entries(prefData)){
-    if(currentArea!=='all' && d.grid_area!==currentArea) continue;
-    if(prefInView(d)) loadScoreForPref(key);
-  }
-}
-
-function loadScoreForArea(area){
-  clearScoreLayers();
-  if(area==='all'){
-    // lazy: 表示範囲内のみロード
-    loadVisiblePrefs();
-  } else {
-    for(const [key,d] of Object.entries(prefData)){
-      if(d.grid_area===area) loadScoreForPref(key);
-    }
-  }
+function ensureScoreTileLayer(){
+  if(scoreTileLayer) return scoreTileLayer;
+  scoreTileLayer = L.tileLayer(`tiles/${currentScoreMode}/{z}/{x}/{y}.png`, {
+    minZoom: 6, maxNativeZoom: 12, maxZoom: 16,
+    opacity: scoreOpacity, pane: 'score',
+    attribution: '', tileSize: 256, errorTileUrl: ''
+  });
+  return scoreTileLayer;
 }
 
 function toggleScoreLayer(){
-  const on=document.getElementById('chkScore').checked;
-  scoreLayers.forEach(l=>{if(on)l.addTo(map);else map.removeLayer(l);});
-  if(on) loadVisiblePrefs();
+  const on = document.getElementById('chkScore').checked;
+  ensureScoreTileLayer();
+  if(on){ if(!map.hasLayer(scoreTileLayer)) scoreTileLayer.addTo(map); }
+  else  { if(map.hasLayer(scoreTileLayer))  map.removeLayer(scoreTileLayer); }
 }
 
 function setOpacity(val){
-  scoreOpacity=val/100;
-  scoreLayers.forEach(l=>l.setOpacity(scoreOpacity));
+  scoreOpacity = val/100;
+  if(scoreTileLayer) scoreTileLayer.setOpacity(scoreOpacity);
 }
 
 function switchScoreMode(mode){
-  currentScoreMode=mode;
-  loadScoreForArea(currentArea);
+  currentScoreMode = mode;
+  if(scoreTileLayer){
+    scoreTileLayer.setUrl(`tiles/${mode}/{z}/{x}/{y}.png`);
+  }
 }
+
+// エリア/県別表示はマップ移動だけで、タイルレイヤー自体は全国常時表示。
+function loadScoreForArea(_area){ /* no-op for tile layer */ }
 
 // ── 電力系統 ──────────────────────────────────────
 function clearGridLayers(){
@@ -426,8 +394,6 @@ function switchPref(key){
   const d=prefData[key];
   if(!d)return;
   map.fitBounds(d.bounds,{padding:[20,20]});
-  clearScoreLayers();
-  loadScoreForPref(key);
 }
 
 // ── 初期化 ─────────────────────────────────────────
@@ -437,10 +403,8 @@ async function init(){
     const r=await fetch('prefectures.json');
     prefData=await r.json();
     updatePrefSelect('all');
-    loadScoreForArea('all');
-    // 全国表示時はグリッドをロードしない (重いため)
-    // エリア選択時にロード
-    map.on('moveend',()=>{ if(currentArea==='all') loadVisiblePrefs(); });
+    ensureScoreTileLayer();
+    if(document.getElementById('chkScore').checked) scoreTileLayer.addTo(map);
   }catch(e){
     console.error('Init error:',e);
   }

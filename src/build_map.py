@@ -17,6 +17,7 @@ Usage:
 import argparse
 import json
 import logging
+import math
 import os
 import shutil
 import sys
@@ -24,10 +25,22 @@ from pathlib import Path
 
 import numpy as np
 import rasterio
+from rasterio.coords import BoundingBox
+from rasterio.enums import Resampling
 from rasterio.merge import merge
+from rasterio.transform import Affine
+from rasterio.warp import reproject
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from config import PREFECTURES, PROJECT_ROOT
+
+# PNG 共通グリッド:
+# 全県の native TIF は 1/3600° (SRTM原点整列) で出力されている前提。
+# PNG はこの 4倍粗いグリッド (4/3600° ≒ 約120m) にスナップ。
+# 全県が同じ大域粗グリッドのサブウィンドウになるため、隣接PNG の画素境界が完全一致し、
+# Leaflet で重畳しても seam/overlap が発生しない。
+# coarse_factor を変えると PNG 解像度と容量が変わる: 8=60m(超高解像,容量大) 4=120m(既定) 2=220m(粗)
+COARSE_FACTOR = 4
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger(__name__)
@@ -45,19 +58,25 @@ GRID_AREAS = ["hokkaido", "tohoku", "tokyo", "chubu", "hokuriku",
 
 
 # ── 1. prefectures.json ────────────────────────────────────
-def generate_prefectures_json(docs_dir: Path, prefs: list[str]):
-    """TIF boundsからprefectures.jsonを生成。PNGもTIF原寸なのでboundsを一致させる。"""
+def generate_prefectures_json(docs_dir: Path, prefs: list[str], png_bounds: dict[str, list] | None = None):
+    """PNG の実効 bounds (coarse-snapped) から prefectures.json を生成。
+    png_bounds が与えられれば使用し、なければ TIF bounds にフォールバック。
+    """
+    png_bounds = png_bounds or {}
     data = {}
     for pref in prefs:
         cfg = PREFECTURES[pref]
-        tif = PROJECT_ROOT / "output" / pref / "score_total_rgba.tif"
-        if tif.exists():
-            with rasterio.open(tif) as ds:
-                b = ds.bounds
-            bounds = [[b.bottom, b.left], [b.top, b.right]]
+        if pref in png_bounds:
+            bounds = png_bounds[pref]
         else:
-            bbox = cfg["bbox"]
-            bounds = [[bbox[1], bbox[0]], [bbox[3], bbox[2]]]
+            tif = PROJECT_ROOT / "output" / pref / "score_total_rgba.tif"
+            if tif.exists():
+                with rasterio.open(tif) as ds:
+                    b = ds.bounds
+                bounds = [[b.bottom, b.left], [b.top, b.right]]
+            else:
+                bbox = cfg["bbox"]
+                bounds = [[bbox[1], bbox[0]], [bbox[3], bbox[2]]]
 
         data[pref] = {
             "name_ja": cfg["name_ja"],
@@ -71,9 +90,12 @@ def generate_prefectures_json(docs_dir: Path, prefs: list[str]):
     log.info("prefectures.json: %d entries", len(data))
 
 
-# ── 2. 県別PNG (原寸) ──────────────────────────────────────
-def generate_pref_pngs(docs_dir: Path, prefs: list[str]):
-    """各県の score_total_rgba.tif → {pref}.png (TIF原寸, クリップなし)。"""
+# ── 2. 県別PNG (粗グリッド整列) ─────────────────────────────
+def generate_pref_pngs(docs_dir: Path, prefs: list[str]) -> dict[str, list]:
+    """全県の score_total_rgba.tif → {pref}.png。
+    戻り値: {pref: [[south,west],[north,east]]} — PNG の実効 bounds。
+    """
+    bounds_map: dict[str, list] = {}
     for pref in prefs:
         output_dir = PROJECT_ROOT / "output" / pref
         rgba_tif = output_dir / "score_total_rgba.tif"
@@ -81,7 +103,8 @@ def generate_pref_pngs(docs_dir: Path, prefs: list[str]):
             continue
 
         png_path = docs_dir / f"{pref}.png"
-        _tif_to_png(rgba_tif, png_path, max_dim=2000)
+        b = _tif_to_png(rgba_tif, png_path)
+        bounds_map[pref] = [[b.bottom, b.left], [b.top, b.right]]
 
         pref_dir = docs_dir / pref
         pref_dir.mkdir(parents=True, exist_ok=True)
@@ -89,36 +112,64 @@ def generate_pref_pngs(docs_dir: Path, prefs: list[str]):
             src = output_dir / f"score_{stype}_rgba.tif"
             dst = pref_dir / f"score_{stype}.png"
             if src.exists():
-                _tif_to_png(src, dst, max_dim=2000)
+                _tif_to_png(src, dst)
 
-    log.info("Prefecture PNGs: %d done", len(prefs))
+    log.info("Prefecture PNGs: %d done (coarse factor=%d)", len(prefs), COARSE_FACTOR)
+    return bounds_map
 
 
-def _tif_to_png(tif_path: Path, png_path: Path, max_dim: int = 2000):
-    """RGBA GeoTIFF → PNG (max_dim上限リサイズ)。
-    リサイズ後にアルファを二値化 (0 or 255) して境界のにじみを防止。
+def _tif_to_png(tif_path: Path, png_path: Path, coarse_factor: int = COARSE_FACTOR) -> BoundingBox:
+    """RGBA GeoTIFF → PNG。
+    全国統一の粗グリッド (res_coarse = res_native * coarse_factor) にスナップして
+    nearest-neighbor で再サンプル。隣接県の PNG 画素が完全整列する。
+    戻り値: 粗グリッドの BoundingBox (Leaflet にそのまま渡せる)。
     """
     from PIL import Image
 
     with rasterio.open(tif_path) as ds:
-        rgba = ds.read()
+        native_tr = ds.transform
+        crs = ds.crs
+        bounds = ds.bounds
+        rgba_native = ds.read()
 
-    img = np.moveaxis(rgba, 0, -1)
-    pil_img = Image.fromarray(img, "RGBA")
+    res_native = abs(native_tr.a)
+    res_coarse = res_native * coarse_factor
 
-    if max_dim > 0 and max(pil_img.size) > max_dim:
-        ratio = max_dim / max(pil_img.size)
-        pil_img = pil_img.resize(
-            (int(pil_img.width * ratio), int(pil_img.height * ratio)),
-            Image.LANCZOS,
+    # 粗グリッドは原点 (lon=0, lat=0) に整列: 全県で共有
+    col_min = math.floor(bounds.left  / res_coarse)
+    col_max = math.ceil (bounds.right / res_coarse)
+    row_min = math.floor(-bounds.top    / res_coarse)
+    row_max = math.ceil (-bounds.bottom / res_coarse)
+    coarse_w = col_max - col_min
+    coarse_h = row_max - row_min
+    coarse_tr = Affine(
+        res_coarse, 0.0, col_min * res_coarse,
+        0.0, -res_coarse, -row_min * res_coarse,
+    )
+    coarse_bounds = BoundingBox(
+        left=col_min * res_coarse,
+        bottom=-row_max * res_coarse,
+        right=col_max * res_coarse,
+        top=-row_min * res_coarse,
+    )
+
+    # 各チャネルを粗グリッドに nearest で再サンプル
+    # 粗画素中心は native 画素中心と決定的に一致するため、隣県で同じ global 粗画素は
+    # 同じ native 画素をサンプリングし、admin マスク判定も一意に決まる。
+    dst = np.zeros((4, coarse_h, coarse_w), dtype=np.uint8)
+    for ch in range(4):
+        reproject(
+            source=rgba_native[ch], destination=dst[ch],
+            src_transform=native_tr, src_crs=crs,
+            dst_transform=coarse_tr, dst_crs=crs,
+            resampling=Resampling.nearest,
         )
-        # LANCZOS補間でアルファが中間値になるので二値化
-        arr = np.array(pil_img)
-        arr[:, :, 3] = np.where(arr[:, :, 3] >= 128, 255, 0)
-        pil_img = Image.fromarray(arr, "RGBA")
 
+    arr = np.moveaxis(dst, 0, -1)  # (H, W, 4)
+    pil_img = Image.fromarray(arr, "RGBA")
     png_path.parent.mkdir(parents=True, exist_ok=True)
     pil_img.save(png_path, optimize=True)
+    return coarse_bounds
 
 
 # ── 3. 送電線GeoJSON コピー ─────────────────────────────────
@@ -211,11 +262,11 @@ def main():
 
     log.info("Processing %d prefectures", len(prefs))
 
-    # 1. prefectures.json
-    generate_prefectures_json(docs_dir, prefs)
+    # 2. 県別PNG (先に生成して実効 bounds を取得)
+    png_bounds = generate_pref_pngs(docs_dir, prefs)
 
-    # 2. 県別PNG
-    generate_pref_pngs(docs_dir, prefs)
+    # 1. prefectures.json (PNG の粗グリッド bounds で)
+    generate_prefectures_json(docs_dir, prefs, png_bounds=png_bounds)
 
     # 3. Grid GeoJSON
     copy_grid_geojson(docs_dir)

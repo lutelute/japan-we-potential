@@ -40,7 +40,7 @@ PREFECTURES = {
     "hokkaido_ishikari": {
         "name_ja": "北海道（石狩）",
         "code": "01",
-        "bbox": (140.85, 42.85, 141.75, 43.55),
+        "bbox": (140.94, 42.63, 141.92, 43.79),
         "center": [43.20, 141.35],
         "epsg_jpc": 6680,
         "grid_area": "hokkaido",
@@ -48,7 +48,7 @@ PREFECTURES = {
     "hokkaido_sorachi": {
         "name_ja": "北海道（空知）",
         "code": "01",
-        "bbox": (141.50, 43.00, 142.65, 43.90),
+        "bbox": (141.44, 42.79, 142.42, 44.1),
         "center": [43.45, 142.05],
         "epsg_jpc": 6680,
         "grid_area": "hokkaido",
@@ -56,7 +56,7 @@ PREFECTURES = {
     "hokkaido_shiribeshi": {
         "name_ja": "北海道（後志）",
         "code": "01",
-        "bbox": (139.80, 42.60, 141.00, 43.40),
+        "bbox": (139.77, 42.49, 141.34, 43.43),
         "center": [43.00, 140.40],
         "epsg_jpc": 6680,
         "grid_area": "hokkaido",
@@ -64,7 +64,7 @@ PREFECTURES = {
     "hokkaido_iburi": {
         "name_ja": "北海道（胆振）",
         "code": "01",
-        "bbox": (140.50, 42.25, 141.60, 42.90),
+        "bbox": (140.48, 42.25, 142.38, 43.04),
         "center": [42.55, 141.05],
         "epsg_jpc": 6680,
         "grid_area": "hokkaido",
@@ -72,7 +72,7 @@ PREFECTURES = {
     "hokkaido_hidaka": {
         "name_ja": "北海道（日高）",
         "code": "01",
-        "bbox": (142.00, 42.00, 143.30, 42.90),
+        "bbox": (141.92, 41.87, 143.38, 43.06),
         "center": [42.45, 142.65],
         "epsg_jpc": 6680,
         "grid_area": "hokkaido",
@@ -80,7 +80,7 @@ PREFECTURES = {
     "hokkaido_oshima": {
         "name_ja": "北海道（渡島）",
         "code": "01",
-        "bbox": (139.80, 41.35, 141.20, 42.20),
+        "bbox": (139.28, 41.3, 141.24, 42.68),
         "center": [41.80, 140.50],
         "epsg_jpc": 6680,
         "grid_area": "hokkaido",
@@ -88,7 +88,7 @@ PREFECTURES = {
     "hokkaido_hiyama": {
         "name_ja": "北海道（檜山）",
         "code": "01",
-        "bbox": (139.50, 41.60, 140.30, 42.60),
+        "bbox": (139.35, 41.53, 140.52, 42.67),
         "center": [42.10, 139.90],
         "epsg_jpc": 6680,
         "grid_area": "hokkaido",
@@ -96,7 +96,7 @@ PREFECTURES = {
     "hokkaido_kamikawa": {
         "name_ja": "北海道（上川）",
         "code": "01",
-        "bbox": (142.00, 43.00, 143.50, 44.30),
+        "bbox": (141.93, 42.83, 143.23, 44.96),
         "center": [43.65, 142.75],
         "epsg_jpc": 6680,
         "grid_area": "hokkaido",
@@ -104,7 +104,7 @@ PREFECTURES = {
     "hokkaido_rumoi": {
         "name_ja": "北海道（留萌）",
         "code": "01",
-        "bbox": (141.40, 43.60, 142.20, 44.50),
+        "bbox": (141.24, 43.63, 142.17, 45.04),
         "center": [44.05, 141.80],
         "epsg_jpc": 6680,
         "grid_area": "hokkaido",
@@ -112,7 +112,7 @@ PREFECTURES = {
     "hokkaido_soya": {
         "name_ja": "北海道（宗谷）",
         "code": "01",
-        "bbox": (141.60, 44.50, 142.60, 45.60),
+        "bbox": (140.91, 44.53, 142.89, 45.58),
         "center": [45.05, 142.10],
         "epsg_jpc": 6680,
         "grid_area": "hokkaido",
@@ -120,7 +120,7 @@ PREFECTURES = {
     "hokkaido_okhotsk": {
         "name_ja": "北海道（オホーツク）",
         "code": "01",
-        "bbox": (142.50, 43.50, 145.00, 44.95),
+        "bbox": (142.53, 43.41, 145.39, 44.74),
         "center": [44.20, 143.75],
         "epsg_jpc": 6680,
         "grid_area": "hokkaido",
@@ -128,7 +128,7 @@ PREFECTURES = {
     "hokkaido_tokachi": {
         "name_ja": "北海道（十勝）",
         "code": "01",
-        "bbox": (142.30, 42.30, 143.80, 43.50),
+        "bbox": (142.62, 42.11, 144.08, 43.69),
         "center": [42.90, 143.05],
         "epsg_jpc": 6680,
         "grid_area": "hokkaido",
@@ -136,7 +136,7 @@ PREFECTURES = {
     "hokkaido_kushiro": {
         "name_ja": "北海道（釧路）",
         "code": "01",
-        "bbox": (143.50, 42.85, 145.10, 43.50),
+        "bbox": (143.65, 42.79, 145.38, 43.75),
         "center": [43.15, 144.30],
         "epsg_jpc": 6680,
         "grid_area": "hokkaido",
@@ -144,7 +144,7 @@ PREFECTURES = {
     "hokkaido_nemuro": {
         "name_ja": "北海道（根室）",
         "code": "01",
-        "bbox": (144.70, 43.00, 145.90, 43.60),
+        "bbox": (144.52, 43.11, 148.94, 45.61),
         "center": [43.30, 145.30],
         "epsg_jpc": 6680,
         "grid_area": "hokkaido",
@@ -155,7 +155,7 @@ PREFECTURES = {
     "aomori": {
         "name_ja": "青森県",
         "code": "02",
-        "bbox": (139.49, 40.21, 141.68, 41.56),
+        "bbox": (139.45, 40.17, 141.73, 41.61),
         "center": [40.82, 140.74],
         "epsg_jpc": 6678,
         "grid_area": "tohoku",
@@ -163,7 +163,7 @@ PREFECTURES = {
     "iwate": {
         "name_ja": "岩手県",
         "code": "03",
-        "bbox": (139.64, 38.74, 142.07, 40.45),
+        "bbox": (140.6, 38.7, 142.12, 40.5),
         "center": [39.70, 141.15],
         "epsg_jpc": 6678,
         "grid_area": "tohoku",
@@ -171,7 +171,7 @@ PREFECTURES = {
     "miyagi": {
         "name_ja": "宮城県",
         "code": "04",
-        "bbox": (140.27, 37.77, 141.68, 39.00),
+        "bbox": (140.22, 37.72, 141.73, 39.05),
         "center": [38.27, 140.87],
         "epsg_jpc": 6678,
         "grid_area": "tohoku",
@@ -179,7 +179,7 @@ PREFECTURES = {
     "akita": {
         "name_ja": "秋田県",
         "code": "05",
-        "bbox": (139.69, 38.87, 140.99, 40.52),
+        "bbox": (139.64, 38.82, 141.05, 40.56),
         "center": [39.72, 140.10],
         "epsg_jpc": 6678,
         "grid_area": "tohoku",
@@ -187,7 +187,7 @@ PREFECTURES = {
     "yamagata": {
         "name_ja": "山形県",
         "code": "06",
-        "bbox": (139.52, 37.73, 140.64, 39.21),
+        "bbox": (139.47, 37.68, 140.7, 39.27),
         "center": [38.24, 140.33],
         "epsg_jpc": 6678,
         "grid_area": "tohoku",
@@ -195,7 +195,7 @@ PREFECTURES = {
     "fukushima": {
         "name_ja": "福島県",
         "code": "07",
-        "bbox": (139.16, 36.79, 141.05, 37.97),
+        "bbox": (139.11, 36.74, 141.1, 38.03),
         "center": [37.75, 140.47],
         "epsg_jpc": 6677,
         "grid_area": "tohoku",
@@ -206,7 +206,7 @@ PREFECTURES = {
     "ibaraki": {
         "name_ja": "茨城県",
         "code": "08",
-        "bbox": (139.68, 35.73, 140.85, 36.97),
+        "bbox": (139.64, 35.69, 140.9, 37.0),
         "center": [36.34, 140.45],
         "epsg_jpc": 6677,
         "grid_area": "tokyo",
@@ -214,7 +214,7 @@ PREFECTURES = {
     "tochigi": {
         "name_ja": "栃木県",
         "code": "09",
-        "bbox": (139.32, 36.19, 140.30, 37.16),
+        "bbox": (139.28, 36.15, 140.34, 37.21),
         "center": [36.65, 139.88],
         "epsg_jpc": 6677,
         "grid_area": "tokyo",
@@ -222,7 +222,7 @@ PREFECTURES = {
     "gunma": {
         "name_ja": "群馬県",
         "code": "10",
-        "bbox": (138.63, 36.07, 139.68, 37.07),
+        "bbox": (138.35, 35.94, 139.72, 37.11),
         "center": [36.39, 139.06],
         "epsg_jpc": 6677,
         "grid_area": "tokyo",
@@ -230,7 +230,7 @@ PREFECTURES = {
     "saitama": {
         "name_ja": "埼玉県",
         "code": "11",
-        "bbox": (138.87, 35.77, 139.91, 36.29),
+        "bbox": (138.66, 35.7, 139.95, 36.33),
         "center": [35.86, 139.65],
         "epsg_jpc": 6677,
         "grid_area": "tokyo",
@@ -238,7 +238,7 @@ PREFECTURES = {
     "chiba": {
         "name_ja": "千葉県",
         "code": "12",
-        "bbox": (139.74, 34.87, 140.87, 36.11),
+        "bbox": (139.69, 34.85, 140.93, 36.15),
         "center": [35.60, 140.12],
         "epsg_jpc": 6677,
         "grid_area": "tokyo",
@@ -254,7 +254,7 @@ PREFECTURES = {
     "kanagawa": {
         "name_ja": "神奈川県",
         "code": "14",
-        "bbox": (138.91, 35.13, 139.79, 35.67),
+        "bbox": (138.87, 35.08, 139.89, 35.72),
         "center": [35.45, 139.64],
         "epsg_jpc": 6677,
         "grid_area": "tokyo",
@@ -265,7 +265,7 @@ PREFECTURES = {
     "niigata": {
         "name_ja": "新潟県",
         "code": "15",
-        "bbox": (137.72, 36.75, 140.05, 38.55),
+        "bbox": (137.58, 36.69, 139.95, 38.6),
         "center": [37.90, 139.02],
         "epsg_jpc": 6676,
         "grid_area": "tohoku",
@@ -273,7 +273,7 @@ PREFECTURES = {
     "toyama": {
         "name_ja": "富山県",
         "code": "16",
-        "bbox": (136.77, 36.27, 137.76, 36.99),
+        "bbox": (136.72, 36.22, 137.81, 37.03),
         "center": [36.70, 137.21],
         "epsg_jpc": 6675,
         "grid_area": "hokuriku",
@@ -281,7 +281,7 @@ PREFECTURES = {
     "ishikawa": {
         "name_ja": "石川県",
         "code": "17",
-        "bbox": (136.23, 36.07, 137.40, 37.86),
+        "bbox": (136.19, 36.02, 137.42, 37.91),
         "center": [36.59, 136.63],
         "epsg_jpc": 6675,
         "grid_area": "hokuriku",
@@ -289,7 +289,7 @@ PREFECTURES = {
     "fukui": {
         "name_ja": "福井県",
         "code": "18",
-        "bbox": (135.55, 35.37, 136.82, 36.29),
+        "bbox": (135.4, 35.29, 136.88, 36.35),
         "center": [35.85, 136.22],
         "epsg_jpc": 6675,
         "grid_area": "hokuriku",
@@ -297,7 +297,7 @@ PREFECTURES = {
     "yamanashi": {
         "name_ja": "山梨県",
         "code": "19",
-        "bbox": (138.18, 35.19, 139.15, 35.97),
+        "bbox": (138.13, 35.12, 139.18, 36.02),
         "center": [35.66, 138.57],
         "epsg_jpc": 6676,
         "grid_area": "tokyo",
@@ -305,7 +305,7 @@ PREFECTURES = {
     "nagano": {
         "name_ja": "長野県",
         "code": "20",
-        "bbox": (137.32, 35.19, 138.73, 37.03),
+        "bbox": (137.27, 35.15, 138.79, 37.08),
         "center": [36.23, 138.18],
         "epsg_jpc": 6676,
         "grid_area": "chubu",
@@ -313,7 +313,7 @@ PREFECTURES = {
     "gifu": {
         "name_ja": "岐阜県",
         "code": "21",
-        "bbox": (136.26, 35.14, 137.65, 36.47),
+        "bbox": (136.23, 35.08, 137.7, 36.52),
         "center": [35.39, 136.72],
         "epsg_jpc": 6675,
         "grid_area": "chubu",
@@ -321,7 +321,7 @@ PREFECTURES = {
     "shizuoka": {
         "name_ja": "静岡県",
         "code": "22",
-        "bbox": (137.48, 34.58, 139.18, 35.64),
+        "bbox": (137.42, 34.52, 139.23, 35.7),
         "center": [34.98, 138.38],
         "epsg_jpc": 6676,
         "grid_area": "chubu",
@@ -329,7 +329,7 @@ PREFECTURES = {
     "aichi": {
         "name_ja": "愛知県",
         "code": "23",
-        "bbox": (136.67, 34.57, 137.84, 35.43),
+        "bbox": (136.62, 34.52, 137.89, 35.47),
         "center": [35.18, 136.91],
         "epsg_jpc": 6675,
         "grid_area": "chubu",
@@ -340,7 +340,7 @@ PREFECTURES = {
     "mie": {
         "name_ja": "三重県",
         "code": "24",
-        "bbox": (135.85, 33.72, 136.99, 35.17),
+        "bbox": (135.8, 33.67, 137.04, 35.31),
         "center": [34.73, 136.51],
         "epsg_jpc": 6674,
         "grid_area": "chubu",
@@ -348,7 +348,7 @@ PREFECTURES = {
     "shiga": {
         "name_ja": "滋賀県",
         "code": "25",
-        "bbox": (135.76, 34.82, 136.45, 35.71),
+        "bbox": (135.71, 34.74, 136.51, 35.75),
         "center": [35.00, 135.87],
         "epsg_jpc": 6674,
         "grid_area": "kansai",
@@ -356,7 +356,7 @@ PREFECTURES = {
     "kyoto": {
         "name_ja": "京都府",
         "code": "26",
-        "bbox": (134.85, 34.77, 136.06, 35.78),
+        "bbox": (134.8, 34.66, 136.11, 35.83),
         "center": [35.02, 135.76],
         "epsg_jpc": 6674,
         "grid_area": "kansai",
@@ -364,7 +364,7 @@ PREFECTURES = {
     "osaka": {
         "name_ja": "大阪府",
         "code": "27",
-        "bbox": (135.09, 34.27, 135.74, 34.98),
+        "bbox": (135.04, 34.22, 135.8, 35.1),
         "center": [34.69, 135.52],
         "epsg_jpc": 6674,
         "grid_area": "kansai",
@@ -372,7 +372,7 @@ PREFECTURES = {
     "hyogo": {
         "name_ja": "兵庫県",
         "code": "28",
-        "bbox": (134.26, 34.15, 135.47, 35.68),
+        "bbox": (134.2, 34.11, 135.52, 35.72),
         "center": [34.69, 135.18],
         "epsg_jpc": 6674,
         "grid_area": "kansai",
@@ -380,7 +380,7 @@ PREFECTURES = {
     "nara": {
         "name_ja": "奈良県",
         "code": "29",
-        "bbox": (135.57, 33.85, 136.23, 34.79),
+        "bbox": (135.49, 33.81, 136.28, 34.83),
         "center": [34.69, 135.83],
         "epsg_jpc": 6674,
         "grid_area": "kansai",
@@ -388,7 +388,7 @@ PREFECTURES = {
     "wakayama": {
         "name_ja": "和歌山県",
         "code": "30",
-        "bbox": (135.05, 33.42, 136.07, 34.38),
+        "bbox": (134.95, 33.38, 136.06, 34.43),
         "center": [33.95, 135.17],
         "epsg_jpc": 6674,
         "grid_area": "kansai",
@@ -399,7 +399,7 @@ PREFECTURES = {
     "tottori": {
         "name_ja": "鳥取県",
         "code": "31",
-        "bbox": (133.15, 35.07, 134.53, 35.62),
+        "bbox": (133.09, 35.01, 134.57, 35.66),
         "center": [35.50, 134.24],
         "epsg_jpc": 6673,
         "grid_area": "chugoku",
@@ -407,7 +407,7 @@ PREFECTURES = {
     "shimane": {
         "name_ja": "島根県",
         "code": "32",
-        "bbox": (131.66, 34.30, 133.39, 36.07),
+        "bbox": (131.62, 34.25, 133.44, 37.3),
         "center": [35.47, 132.77],
         "epsg_jpc": 6672,
         "grid_area": "chugoku",
@@ -415,7 +415,7 @@ PREFECTURES = {
     "okayama": {
         "name_ja": "岡山県",
         "code": "33",
-        "bbox": (133.26, 34.33, 134.42, 35.36),
+        "bbox": (133.22, 34.25, 134.46, 35.4),
         "center": [34.66, 133.93],
         "epsg_jpc": 6673,
         "grid_area": "chugoku",
@@ -423,7 +423,7 @@ PREFECTURES = {
     "hiroshima": {
         "name_ja": "広島県",
         "code": "34",
-        "bbox": (132.03, 34.04, 133.41, 35.12),
+        "bbox": (131.99, 33.98, 133.52, 35.16),
         "center": [34.40, 132.46],
         "epsg_jpc": 6672,
         "grid_area": "chugoku",
@@ -431,7 +431,7 @@ PREFECTURES = {
     "yamaguchi": {
         "name_ja": "山口県",
         "code": "35",
-        "bbox": (130.82, 33.73, 132.11, 34.77),
+        "bbox": (130.72, 33.66, 132.54, 34.85),
         "center": [34.19, 131.47],
         "epsg_jpc": 6672,
         "grid_area": "chugoku",
@@ -442,7 +442,7 @@ PREFECTURES = {
     "tokushima": {
         "name_ja": "徳島県",
         "code": "36",
-        "bbox": (133.55, 33.50, 134.82, 34.25),
+        "bbox": (133.61, 33.49, 134.87, 34.3),
         "center": [34.07, 134.56],
         "epsg_jpc": 6673,
         "grid_area": "shikoku",
@@ -450,7 +450,7 @@ PREFECTURES = {
     "kagawa": {
         "name_ja": "香川県",
         "code": "37",
-        "bbox": (133.48, 34.09, 134.46, 34.51),
+        "bbox": (133.4, 33.96, 134.5, 34.61),
         "center": [34.34, 134.04],
         "epsg_jpc": 6673,
         "grid_area": "shikoku",
@@ -458,7 +458,7 @@ PREFECTURES = {
     "ehime": {
         "name_ja": "愛媛県",
         "code": "38",
-        "bbox": (132.01, 32.90, 133.68, 34.01),
+        "bbox": (131.96, 32.83, 133.74, 34.35),
         "center": [33.84, 132.77],
         "epsg_jpc": 6673,
         "grid_area": "shikoku",
@@ -466,7 +466,7 @@ PREFECTURES = {
     "kochi": {
         "name_ja": "高知県",
         "code": "39",
-        "bbox": (132.47, 32.71, 134.31, 33.88),
+        "bbox": (132.43, 32.65, 134.36, 33.93),
         "center": [33.56, 133.53],
         "epsg_jpc": 6673,
         "grid_area": "shikoku",
@@ -477,7 +477,7 @@ PREFECTURES = {
     "fukuoka": {
         "name_ja": "福岡県",
         "code": "40",
-        "bbox": (130.02, 33.00, 131.19, 33.97),
+        "bbox": (129.93, 32.95, 131.24, 34.3),
         "center": [33.61, 130.42],
         "epsg_jpc": 6671,
         "grid_area": "kyushu",
@@ -485,7 +485,7 @@ PREFECTURES = {
     "saga": {
         "name_ja": "佐賀県",
         "code": "41",
-        "bbox": (129.74, 32.95, 130.56, 33.60),
+        "bbox": (129.69, 32.9, 130.59, 33.67),
         "center": [33.25, 130.30],
         "epsg_jpc": 6671,
         "grid_area": "kyushu",
@@ -493,7 +493,7 @@ PREFECTURES = {
     "nagasaki": {
         "name_ja": "長崎県",
         "code": "42",
-        "bbox": (128.60, 32.57, 130.35, 34.73),
+        "bbox": (128.05, 31.92, 130.44, 34.78),
         "center": [32.75, 129.87],
         "epsg_jpc": 6670,
         "grid_area": "kyushu",
@@ -501,7 +501,7 @@ PREFECTURES = {
     "kumamoto": {
         "name_ja": "熊本県",
         "code": "43",
-        "bbox": (130.10, 32.07, 131.33, 33.20),
+        "bbox": (129.89, 32.04, 131.38, 33.25),
         "center": [32.79, 130.74],
         "epsg_jpc": 6671,
         "grid_area": "kyushu",
@@ -509,7 +509,7 @@ PREFECTURES = {
     "oita": {
         "name_ja": "大分県",
         "code": "44",
-        "bbox": (130.83, 32.71, 132.12, 33.75),
+        "bbox": (130.77, 32.66, 132.23, 33.79),
         "center": [33.24, 131.61],
         "epsg_jpc": 6671,
         "grid_area": "kyushu",
@@ -517,7 +517,7 @@ PREFECTURES = {
     "miyazaki": {
         "name_ja": "宮崎県",
         "code": "45",
-        "bbox": (130.68, 31.35, 131.89, 32.84),
+        "bbox": (130.65, 31.31, 131.94, 32.89),
         "center": [31.91, 131.42],
         "epsg_jpc": 6671,
         "grid_area": "kyushu",
@@ -525,7 +525,7 @@ PREFECTURES = {
     "kagoshima": {
         "name_ja": "鹿児島県",
         "code": "46",
-        "bbox": (129.43, 30.20, 131.33, 32.26),
+        "bbox": (128.35, 26.97, 131.26, 32.36),
         "center": [31.56, 130.56],
         "epsg_jpc": 6671,
         "grid_area": "kyushu",
@@ -536,7 +536,7 @@ PREFECTURES = {
     "okinawa": {
         "name_ja": "沖縄県",
         "code": "47",
-        "bbox": (126.15, 24.04, 128.32, 26.90),
+        "bbox": (122.88, 24.0, 131.38, 27.94),
         "center": [26.33, 127.80],
         "epsg_jpc": 6691,
         "grid_area": "okinawa",

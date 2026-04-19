@@ -181,10 +181,10 @@ def main():
     # SRTM DEM
     if not args.skip_dem:
         dem_dir = land_dir / "dem"
-        if dem_dir.is_symlink() or (dem_dir.exists() and any(dem_dir.glob("*.hgt"))):
-            print(f"\n[3] DEM - already available")
+        if dem_dir.is_symlink():
+            print(f"\n[3] DEM - symlinked from re-potential")
         else:
-            print(f"\n[3] SRTM DEMタイルのダウンロード")
+            print(f"\n[3] SRTM DEMタイル (bbox の全 tile をチェック)")
             download_srtm(pref, land_dir)
 
     print(f"\n完了! データ保存先: {land_dir}")
