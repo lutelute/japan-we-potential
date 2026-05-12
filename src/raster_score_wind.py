@@ -387,8 +387,22 @@ def compute_score_residential_dist(pref: str, transform, width, height, crs) -> 
 
 
 # ── 総合スコア ──────────────────────────────────────────────
+# ── 道路距離スコア ──────────────────────────────────────────
+def compute_score_road_dist(pref: str, transform, width, height, crs) -> np.ndarray:
+    """道路距離スコア。fetch_osm_road.py が生成した TIF を使用。
+    TIF がない場合はデフォルト 50 を返す。"""
+    road_tif = PROJECT_ROOT / "data" / pref / "land" / "road" / f"{pref}_road_score.tif"
+    if not road_tif.exists():
+        log.info("  road_dist: no TIF, using default 50 (run fetch_osm_road.py to improve)")
+        return np.full((height, width), 50, dtype=np.uint8)
+
+    log.info("  road_dist: reading %s", road_tif)
+    return _resample_to_grid(road_tif, transform, width, height, crs).astype(np.uint8)
+
+
 def compute_total_score(scores: dict) -> np.ndarray:
     w = WEIGHTS
+    road = scores.get("road_dist", np.full(scores["wind_speed"].shape, 50, dtype=np.uint8))
     total = (
         scores["wind_speed"].astype(np.float32) * w["wind_speed"]
         + scores["slope"].astype(np.float32) * w["slope"]
@@ -397,8 +411,8 @@ def compute_total_score(scores: dict) -> np.ndarray:
         + scores["land_use"].astype(np.float32) * w["land_use"]
         + scores["elevation"].astype(np.float32) * w["elevation"]
         + scores["residential_dist"].astype(np.float32) * w["residential_distance"]
-        + 50.0 * w["road_distance"]      # デフォルト道路スコア
-        + 80.0 * w["protection"]          # デフォルト保護区スコア
+        + road.astype(np.float32) * w["road_distance"]
+        + 80.0 * w["protection"]
     )
     return np.clip(total, 0, 100).astype(np.uint8)
 
@@ -484,6 +498,10 @@ def process_prefecture(pref: str, resolution_m: int = 30, skip_tiles: bool = Fal
     log.info("[7/7] Residential distance score...")
     scores["residential_dist"] = compute_score_residential_dist(pref, transform, width, height, crs)
 
+    # 8) 道路距離 (TIF があれば実データ、なければデフォルト 50)
+    log.info("[8/8] Road distance score...")
+    scores["road_dist"] = compute_score_road_dist(pref, transform, width, height, crs)
+
     # 総合スコア
     log.info("Computing total score...")
     scores["total"] = compute_total_score(scores)
@@ -524,7 +542,7 @@ def process_prefecture(pref: str, resolution_m: int = 30, skip_tiles: bool = Fal
 
     # スコア TIF 出力
     score_names = ["total", "wind_speed", "slope", "elevation",
-                   "grid_dist", "sub_dist", "land_use", "residential_dist"]
+                   "grid_dist", "sub_dist", "land_use", "residential_dist", "road_dist"]
     for name in score_names:
         write_score_tif(scores[name], output_dir / f"score_{name}{res_suffix}.tif",
                         transform, crs)

@@ -109,6 +109,8 @@ def run_step(pref: str, step: str, resolution: int, wind_fallback: bool = False)
         "extract_grid": [python, str(src_dir / "extract_grid.py"), "-p", pref],
         "slope": [python, str(src_dir / "slope_analysis.py"), "-p", pref],
         "osm_land_use": [python, str(src_dir / "fetch_osm_land_use.py"), "-p", pref],
+        "road_data": [python, str(src_dir / "fetch_osm_road.py"), "-p", pref,
+                      "--resolution", str(resolution)],
         "wind_data": [python, str(src_dir / "download_wind_data.py"), "-p", pref]
                     + (["--fallback"] if wind_fallback else []),
         "raster_score": [python, str(src_dir / "raster_score_wind.py"), "-p", pref,
@@ -192,14 +194,14 @@ def run_phase_parallel(phase_name, pref_list, steps, resolution, cp, workers,
     return failed
 
 
-def run_phase_overpass(pref_list, resolution, cp):
-    step = "osm_land_use"
+def _run_overpass_phase(step: str, phase_name: str, pref_list, resolution, cp):
+    """Overpass API ステップの共通実行関数 (リトライ・クールダウン付き)"""
     remaining = [p for p in pref_list if not is_step_done(cp, p, step)]
     if not remaining:
         return []
 
     log.info("=" * 60)
-    log.info("PHASE: Overpass API (%d prefectures)", len(remaining))
+    log.info("PHASE: %s (%d prefectures)", phase_name, len(remaining))
     log.info("=" * 60)
 
     max_rounds = 3
@@ -229,6 +231,14 @@ def run_phase_overpass(pref_list, resolution, cp):
     return remaining
 
 
+def run_phase_overpass(pref_list, resolution, cp):
+    return _run_overpass_phase("osm_land_use", "Overpass API — 土地利用", pref_list, resolution, cp)
+
+
+def run_phase_overpass_road(pref_list, resolution, cp):
+    return _run_overpass_phase("road_data", "Overpass API — 道路データ", pref_list, resolution, cp)
+
+
 def main():
     parser = argparse.ArgumentParser(description="風力ポテンシャル バッチ計算")
     parser.add_argument("-p", "--prefecture", default=None)
@@ -240,6 +250,8 @@ def main():
                         help="ERA5が使えない場合、標高ベースの風速推定を使用")
     parser.add_argument("--skip-osm", action="store_true",
                         help="OSM土地利用取得をスキップ (デフォルト値で代替)")
+    parser.add_argument("--skip-road", action="store_true",
+                        help="OSM道路データ取得をスキップ (デフォルト50で代替)")
     args = parser.parse_args()
 
     workers = max(1, args.workers)
@@ -281,12 +293,19 @@ def main():
 
     phase2_list = [p for p in pref_list if p not in phase1_failed]
 
-    # Phase 2a: Overpass API (順次)
+    # Phase 2a: Overpass API — 土地利用 (順次)
     if args.skip_osm:
-        log.info("OSM skipped (--skip-osm)")
+        log.info("OSM land_use skipped (--skip-osm)")
         phase2a_failed = []
     else:
         phase2a_failed = run_phase_overpass(phase2_list, args.resolution, cp)
+
+    # Phase 2c: Overpass API — 道路データ (順次)
+    if args.skip_road:
+        log.info("OSM road_data skipped (--skip-road)")
+        phase2c_failed = []
+    else:
+        phase2c_failed = run_phase_overpass_road(phase2_list, args.resolution, cp)
 
     # Phase 2b: Wind data (並列 or 順次)
     phase2b_failed = run_phase_parallel(
@@ -294,15 +313,15 @@ def main():
         args.resolution, cp, workers, wind_fallback=args.wind_fallback,
     )
 
-    # Phase 3: raster_score (並列)
-    phase3_list = [p for p in phase2_list]  # OSM/wind失敗でもデフォルト値で実行可能
+    # Phase 3: raster_score (並列) — OSM/wind/road 失敗でもデフォルト値で継続
+    phase3_list = [p for p in phase2_list]
     phase3_failed = run_phase_parallel(
         "3-raster", phase3_list, ["raster_score"],
         args.resolution, cp, workers,
     )
 
     # 完了マーク
-    all_steps = ["download", "extract_grid", "slope", "osm_land_use", "wind_data", "raster_score"]
+    all_steps = ["download", "extract_grid", "slope", "osm_land_use", "road_data", "wind_data", "raster_score"]
     for pref in pref_list:
         steps_done = cp.get(pref, {}).get("completed_steps", [])
         if all(s in steps_done for s in all_steps):
@@ -310,7 +329,7 @@ def main():
 
     elapsed = time.time() - start_time
     completed = sum(1 for p in pref_list if cp.get(p, {}).get("status") == "completed")
-    all_failed = set(phase1_failed) | set(phase2a_failed) | set(phase2b_failed) | set(phase3_failed)
+    all_failed = set(phase1_failed) | set(phase2a_failed) | set(phase2b_failed) | set(phase2c_failed) | set(phase3_failed)
 
     log.info("=" * 60)
     log.info("BATCH COMPLETE")
