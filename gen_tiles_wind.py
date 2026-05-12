@@ -5,15 +5,19 @@
 docs/{pref}_{mode}.png を大面積→小面積順に合成 → GeoTIFF → XYZタイル
 
 改善点 (REプロジェクト gen_tiles.py 比):
-  - デフォルト z=6-13 (旧: z=5-10)
   - 全8モード対応 (wind_speed / residential_dist を追加)
   - 全国bbox を正確な日本領土に拡張 (沖縄・北海道含む)
   - gen_score_pngs_wind.py を先に実行してから使用
 
+デフォルト設定:
+  - z=5-9 (REプロジェクトと同じ。z=10+ は GitHub Pages サイズ超過のため)
+  - RES = 0.003 °/px (333m/px, REと同一。0.0017 にすると7倍重くなる)
+  - 高解像度版: --zoom 6-13 (pws-160coreで生成推奨)
+
 Usage:
-    python gen_tiles_wind.py               # 全モード z=6-13
+    python gen_tiles_wind.py               # 全モード z=5-9 (GitHub Pages用)
     python gen_tiles_wind.py --mode total  # totalのみ
-    python gen_tiles_wind.py --zoom 6-11   # ズームレベル指定
+    python gen_tiles_wind.py --zoom 6-13   # 高解像度版 (pws-160core推奨)
 """
 import argparse
 import json
@@ -32,8 +36,9 @@ PREFS_JSON = DOCS / "prefectures.json"
 # 日本全域 bounds (沖縄〜北海道)
 JAPAN = dict(south=24.0, west=122.8, north=45.7, east=154.0)
 
-# 約 185m/pixel (zoom=13相当の詳細度)
-RES = 0.0017  # °/px
+# 約 333m/pixel (japan-re-potential と同一設定)
+# 0.0017 に下げると 7倍重くなり GitHub Pages への push でタイムアウト
+RES = 0.003  # °/px
 
 MODES = [
     "total", "wind_speed", "slope", "elevation",
@@ -138,8 +143,8 @@ def main():
     parser = argparse.ArgumentParser(description="全国風力スコア XYZタイル生成")
     parser.add_argument("--mode", choices=MODES + ["all"], default="all")
     parser.add_argument(
-        "--zoom", default="6-13",
-        help="ズームレベル範囲 (例: 6-13). デフォルト 6-13",
+        "--zoom", default="5-9",
+        help="ズームレベル範囲 (例: 5-9). デフォルト 5-9 (GitHub Pages用)。高解像度は 6-13 (pws-160core推奨)",
     )
     args = parser.parse_args()
 
@@ -166,7 +171,7 @@ def main():
 
     total_mb = sum(f.stat().st_size for f in TILES.rglob("*.png")) / 1e6
     print(f"\n=== 完了: {total_tiles} タイル追加, 総計 {total_mb:.1f}MB (z={z_min}-{z_max}) ===")
-    print(f"    → docs/index.html の maxNativeZoom を {z_max} 以上に設定してください")
+    print(f"    → docs/index.html の maxNativeZoom を {z_max} に設定してください")
 
 
 if __name__ == "__main__":
