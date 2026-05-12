@@ -82,8 +82,11 @@ def composite_prefs(mode: str, prefs: dict) -> np.ndarray:
             continue
 
         img = Image.open(DOCS / f"{key}{suffix}.png").convert("RGBA")
-        patch = np.array(img.resize((c1 - c0, r1 - r0), Image.LANCZOS))
-        canvas[r0:r1, c0:c1] = patch
+        # NEAREST で alpha の補間を防ぐ（LANCZOS は alpha を滲ませる）
+        patch = np.array(img.resize((c1 - c0, r1 - r0), Image.NEAREST))
+        # alpha>0 のピクセルのみ上書き（alpha=0=県外が隣県データを消さない）
+        mask = patch[:, :, 3] > 0
+        canvas[r0:r1, c0:c1][mask] = patch[mask]
 
     print(f"  合成: {len(keys)} 県, canvas {CW}x{CH}px")
     return canvas
