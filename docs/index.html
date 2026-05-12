@@ -85,8 +85,8 @@ html,body{margin:0;padding:0;height:100%;font-family:-apple-system,'Hiragino San
   </div>
 
   <h3>電力系統</h3>
-  <label><input type="checkbox" id="chkLines" checked onchange="toggleGrid('lines')"> 送電線</label>
-  <label><input type="checkbox" id="chkSubs" checked onchange="toggleGrid('subs')"> 変電所</label>
+  <label><input type="checkbox" id="chkLines" onchange="toggleGrid('lines')"> 送電線</label>
+  <label><input type="checkbox" id="chkSubs" onchange="toggleGrid('subs')"> 変電所</label>
   <label><input type="checkbox" id="chkPlants" onchange="toggleGrid('plants')"> 発電所</label>
 
   <h3>ハザードマップ</h3>
@@ -312,8 +312,8 @@ async function loadGridForArea(area){
         if(!lat||!lon)return;
         const m=L.circleMarker([lat,lon],{radius:v>=275?8:v>=154?6:v>=66?4:3,
           color:vColor(v),fillColor:vColor(v),fillOpacity:0.7,weight:1.5,pane:'substations'});
-        if(n&&v>=154)m.bindTooltip(n,{permanent:true,direction:'right',className:'sub-label'});
-        else if(n)m.bindTooltip(n,{sticky:true});
+        
+        if(n)m.bindTooltip(n,{sticky:true});
         m.addTo(ly);
         if(n)subsData.push({name:n,v,lat,lon,area:a});
       });
@@ -426,7 +426,7 @@ function switchArea(area){
   updatePrefSelect(area);
   clearGridLayers();
   loadScoreForArea(area);
-  loadGridForArea(area);
+  if(area!=='all') loadGridForArea(area);
 }
 
 function switchPref(key){
@@ -445,7 +445,7 @@ async function init(){
     updatePrefSelect('all');
     ensureScoreTileLayer();
     if(document.getElementById('chkScore').checked) scoreTileLayer.addTo(map);
-    await loadGridForArea('all');
+    // system layers loaded on area select only
   }catch(e){
     console.error('Init error:',e);
   }
