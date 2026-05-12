@@ -238,7 +238,7 @@ let scoreTileLayer = null;
 function ensureScoreTileLayer(){
   if(scoreTileLayer) return scoreTileLayer;
   scoreTileLayer = L.tileLayer(`tiles/${currentScoreMode}/{z}/{x}/{y}.png?v=20260513`, {
-    minZoom: 6, maxNativeZoom: 10, maxZoom: 18,
+    minZoom: 6, maxNativeZoom: 11, maxZoom: 18,
     opacity: scoreOpacity, pane: 'score',
     attribution: '', tileSize: 256, errorTileUrl: ''
   });
