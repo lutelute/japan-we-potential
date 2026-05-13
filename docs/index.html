@@ -6,6 +6,8 @@
 <title>全国 風力発電適地スコアマップ</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/georaster@1.6.0/dist/georaster.browser.bundle.min.js"></script>
+<script src="https://unpkg.com/georaster-layer-for-leaflet@3.10.0/dist/georaster-layer-for-leaflet.min.js"></script>
 <style>
 html,body{margin:0;padding:0;height:100%;font-family:-apple-system,'Hiragino Sans',sans-serif}
 #map{width:100%;height:100%}
@@ -83,6 +85,8 @@ html,body{margin:0;padding:0;height:100%;font-family:-apple-system,'Hiragino San
   <div style="margin-left:18px">
     <label><input type="range" id="opacitySlider" min="0" max="100" value="75" oninput="setOpacity(this.value)"> 透過度</label>
   </div>
+  <label id="hiresRow" style="display:none"><input type="checkbox" id="chkHires" onchange="updateHires()"> 🔬 30mメッシュ表示 (ローカル)</label>
+  <div id="hiresStatus" style="font-size:10px;color:#1565c0;margin-left:18px;display:none"></div>
 
   <h3>電力系統</h3>
   <label><input type="checkbox" id="chkLines" onchange="toggleGrid('lines')"> 送電線</label>
@@ -274,6 +278,7 @@ function setOpacity(val){
   scoreOpacity = val/100;
   if(scoreBgLayer)   scoreBgLayer.setOpacity(scoreOpacity);
   if(scoreTileLayer) scoreTileLayer.setOpacity(scoreOpacity);
+  if(hiresLayer)     hiresLayer.setOpacity(scoreOpacity);
 }
 
 const MODE_INFO = {
@@ -292,6 +297,10 @@ function switchScoreMode(mode){
   const url = _tileUrl(mode);
   if(scoreBgLayer)   scoreBgLayer.setUrl(url);
   if(scoreTileLayer) scoreTileLayer.setUrl(url);
+  // hiresLayerをリロード
+  hiresLoadedKey=null; hiresLoadedMode=null;
+  if(hiresLayer){map.removeLayer(hiresLayer);hiresLayer=null;}
+  updateHires();
   // 凡例を更新
   const info = MODE_INFO[mode] || MODE_INFO.total;
   document.getElementById('legend-mode-title').textContent = info.title;
@@ -474,6 +483,87 @@ function switchPref(key){
   map.fitBounds(d.bounds,{padding:[20,20]});
 }
 
+// ── 高解像度TIF直接レンダリング (ローカル専用) ──────────────
+const IS_LOCAL = location.hostname==='localhost'||location.hostname==='127.0.0.1';
+let hiresLayer=null, hiresLoadedKey=null, hiresLoadedMode=null;
+
+function findPrefAtCenter(){
+  const c=map.getCenter();
+  let best=null, bestArea=Infinity;
+  for(const [key,d] of Object.entries(prefData)){
+    const [[s,w],[n,e]]=d.bounds;
+    if(c.lat>=s&&c.lat<=n&&c.lng>=w&&c.lng<=e){
+      const a=(n-s)*(e-w);
+      if(a<bestArea){bestArea=a;best=key;}
+    }
+  }
+  return best;
+}
+
+function _setXyzOpacity(v){
+  if(scoreBgLayer)   scoreBgLayer.setOpacity(v);
+  if(scoreTileLayer) scoreTileLayer.setOpacity(v);
+}
+
+async function loadHiresTif(prefKey, mode){
+  if(hiresLoadedKey===prefKey&&hiresLoadedMode===mode) return;
+  const st=document.getElementById('hiresStatus');
+  st.textContent=`読込中: ${prefKey}/${mode}…`;
+  st.style.display='block';
+  const url=`/output/${prefKey}/score_${mode}_rgba.tif`;
+  try{
+    const resp=await fetch(url);
+    if(!resp.ok){st.textContent='TIF未検出 (output/が必要)';_setXyzOpacity(scoreOpacity);return;}
+    const buf=await resp.arrayBuffer();
+    const gr=await parseGeoraster(buf);
+    if(hiresLayer){map.removeLayer(hiresLayer);hiresLayer=null;}
+    // XYZタイルを非表示（2重表示防止）
+    _setXyzOpacity(0);
+    hiresLayer=new GeoRasterLayer({
+      georaster:gr,
+      opacity:scoreOpacity,
+      pixelValuesToColorFn:vals=>{
+        const [r,g,b,a]=vals;
+        if(a<10) return 'rgba(160,160,160,0.12)';
+        return `rgba(${r},${g},${b},${a/255})`;
+      },
+      resolution:256,
+      pane:'score'
+    });
+    hiresLayer.addTo(map);
+    hiresLoadedKey=prefKey;
+    hiresLoadedMode=mode;
+    st.textContent=`表示中: ${prefKey} (30m)`;
+  }catch(e){
+    st.textContent='TIF読込エラー';
+    _setXyzOpacity(scoreOpacity);
+    console.error(e);
+  }
+}
+
+function updateHires(){
+  if(!IS_LOCAL) return;
+  const chk=document.getElementById('chkHires');
+  if(!chk||!chk.checked){
+    if(hiresLayer){map.removeLayer(hiresLayer);hiresLayer=null;hiresLoadedKey=null;}
+    _setXyzOpacity(scoreOpacity); // XYZタイルを復元
+    document.getElementById('hiresStatus').style.display='none';
+    return;
+  }
+  const z=map.getZoom();
+  if(z>=12){
+    const pref=findPrefAtCenter();
+    if(pref) loadHiresTif(pref,currentScoreMode);
+  }else{
+    if(hiresLayer){map.removeLayer(hiresLayer);hiresLayer=null;hiresLoadedKey=null;}
+    _setXyzOpacity(scoreOpacity);
+    document.getElementById('hiresStatus').textContent='z≥12で有効';
+    document.getElementById('hiresStatus').style.display='block';
+  }
+}
+
+map.on('zoomend moveend', updateHires);
+
 // ── 初期化 ─────────────────────────────────────────
 async function init(){
   showLoading(true);
@@ -482,7 +572,13 @@ async function init(){
     prefData=await r.json();
     updatePrefSelect('all');
     ensureScoreTileLayer();
-    if(document.getElementById('chkScore').checked) scoreTileLayer.addTo(map);
+    if(document.getElementById('chkScore').checked){
+      scoreBgLayer.addTo(map);
+      scoreTileLayer.addTo(map);
+    }
+    if(IS_LOCAL){
+      document.getElementById('hiresRow').style.display='block';
+    }
     // system layers loaded on area select only
   }catch(e){
     console.error('Init error:',e);
