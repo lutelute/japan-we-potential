@@ -97,8 +97,11 @@ html,body{margin:0;padding:0;height:100%;font-family:-apple-system,'Hiragino San
 </div>
 
 <div id="legend">
-  <div class="block">
-    <b>風力適地スコア</b>
+  <div class="block" id="legend-mode">
+    <b id="legend-mode-title">風力適地 総合スコア</b>
+    <div id="legend-mode-desc" style="font-size:10px;color:#555;margin:2px 0 4px;line-height:1.4;max-width:160px">
+      AHP重み付け総合評価<br>風速30%・送電線15%・傾斜12%<br>変電所10%・土地10%・居住地8%
+    </div>
     <div class="item"><div class="box" style="background:#006400"></div>80-100 最適</div>
     <div class="item"><div class="box" style="background:#228B22"></div>60-79 良好</div>
     <div class="item"><div class="box" style="background:#DAA520"></div>40-59 中程度</div>
@@ -257,11 +260,27 @@ function setOpacity(val){
   if(scoreTileLayer) scoreTileLayer.setOpacity(scoreOpacity);
 }
 
+const MODE_INFO = {
+  total:            {title:'風力適地 総合スコア',    desc:'AHP重み付け総合評価<br>風速30% / 送電線15% / 傾斜12%<br>変電所10% / 土地10% / 居住地8%<br>標高5% / 道路5% / 保護区5%'},
+  wind_speed:       {title:'風速スコア',             desc:'ERA5 100m高さ 年間平均風速<br>1.5 m/s → 0点（不適）<br>5.0 m/s → 100点（最適）'},
+  slope:            {title:'傾斜スコア',             desc:'SRTM 30m DEM 傾斜角<br>&lt;5° → 100点（平坦・最適）<br>15〜20° → 30点<br>&gt;30° → 0点（建設不可）'},
+  elevation:        {title:'標高スコア',             desc:'SRTM 30m DEM 標高<br>500〜1000m → 100点（尾根風・最適）<br>&lt;200m → 70点（平野部）<br>&gt;2000m → 10点（高山）'},
+  grid_dist:        {title:'送電線距離スコア',       desc:'154kV以上送電線からの距離<br>0m → 100点（接続コスト小）<br>5km → 50点<br>20km → 0点（接続困難）'},
+  sub_dist:         {title:'変電所距離スコア',       desc:'66kV以上変電所からの距離<br>0m → 100点<br>5km → 50点<br>20km → 0点'},
+  land_use:         {title:'土地利用スコア',         desc:'OSM 土地利用分類<br>荒地・草地 → 90点（最適）<br>農地 → 60点<br>森林 → 20点<br>建物・道路 → 0点（不適）'},
+  residential_dist: {title:'居住地距離スコア',       desc:'騒音バッファ（風力規制）<br>&lt;500m → 0点（排除ゾーン）<br>1〜2km → 70点<br>&gt;3km → 100点（適地）'},
+};
+
 function switchScoreMode(mode){
   currentScoreMode = mode;
+  const v = '?v=20260513';
   if(scoreTileLayer){
-    scoreTileLayer.setUrl(`tiles/${mode}/{z}/{x}/{y}.png`);
+    scoreTileLayer.setUrl(`tiles/${mode}/{z}/{x}/{y}.png${v}`);
   }
+  // 凡例を更新
+  const info = MODE_INFO[mode] || MODE_INFO.total;
+  document.getElementById('legend-mode-title').textContent = info.title;
+  document.getElementById('legend-mode-desc').innerHTML = info.desc;
 }
 
 // エリア/県別表示はマップ移動だけで、タイルレイヤー自体は全国常時表示。
@@ -346,6 +365,10 @@ async function loadGridForArea(area){
 function toggleGrid(type){
   const id=type==='lines'?'chkLines':type==='subs'?'chkSubs':'chkPlants';
   const on=document.getElementById(id).checked;
+  if(on && gridLayers[type].length===0){
+    loadGridForArea(currentArea);
+    return;
+  }
   gridLayers[type].forEach(l=>{if(on)l.addTo(map);else map.removeLayer(l);});
 }
 
