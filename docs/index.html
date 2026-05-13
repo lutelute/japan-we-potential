@@ -150,6 +150,7 @@ html,body{margin:0;padding:0;height:100%;font-family:-apple-system,'Hiragino San
 <script>
 const map = L.map('map').setView([36.5, 137.0], 6);
 
+map.createPane('scoreBase'); map.getPane('scoreBase').style.zIndex = 295; map.getPane('scoreBase').style.pointerEvents = 'none';
 map.createPane('score'); map.getPane('score').style.zIndex = 300; map.getPane('score').style.pointerEvents = 'none';
 map.createPane('hazard'); map.getPane('hazard').style.zIndex = 450; map.getPane('hazard').style.pointerEvents = 'none';
 map.createPane('substations'); map.getPane('substations').style.zIndex = 500;
@@ -235,28 +236,43 @@ function fuelColor(fuel){
 
 function showLoading(v){document.getElementById('loading').style.display=v?'block':'none';}
 
-// ── スコアレイヤー (XYZ タイル方式、継ぎ目なし) ─────
+// ── スコアレイヤー (2層構成: 下地z=9コンポジット + 上層z=10-11 hires) ────
+// 下地: maxNativeZoom=9 → z>9で upscale、排除ゾーンの穴を埋める
+// 上層: minZoom=10, maxNativeZoom=11 → 30mhiresタイルで上書き
 let scoreTileLayer = null;
+let scoreBgLayer   = null;
+
+function _tileUrl(mode){ return `tiles/${mode}/{z}/{x}/{y}.png?v=20260513`; }
 
 function ensureScoreTileLayer(){
-  if(scoreTileLayer) return scoreTileLayer;
-  scoreTileLayer = L.tileLayer(`tiles/${currentScoreMode}/{z}/{x}/{y}.png?v=20260513`, {
-    minZoom: 6, maxNativeZoom: 11, maxZoom: 18,
-    opacity: scoreOpacity, pane: 'score',
-    attribution: '', tileSize: 256, errorTileUrl: ''
+  if(scoreTileLayer) return;
+  scoreBgLayer = L.tileLayer(_tileUrl(currentScoreMode), {
+    minZoom: 5, maxNativeZoom: 9, maxZoom: 18,
+    opacity: scoreOpacity, pane: 'scoreBase',
+    attribution: '', tileSize: 256
   });
-  return scoreTileLayer;
+  scoreTileLayer = L.tileLayer(_tileUrl(currentScoreMode), {
+    minZoom: 10, maxNativeZoom: 11, maxZoom: 18,
+    opacity: scoreOpacity, pane: 'score',
+    attribution: '', tileSize: 256
+  });
 }
 
 function toggleScoreLayer(){
   const on = document.getElementById('chkScore').checked;
   ensureScoreTileLayer();
-  if(on){ if(!map.hasLayer(scoreTileLayer)) scoreTileLayer.addTo(map); }
-  else  { if(map.hasLayer(scoreTileLayer))  map.removeLayer(scoreTileLayer); }
+  if(on){
+    if(!map.hasLayer(scoreBgLayer))   scoreBgLayer.addTo(map);
+    if(!map.hasLayer(scoreTileLayer)) scoreTileLayer.addTo(map);
+  } else {
+    if(map.hasLayer(scoreBgLayer))   map.removeLayer(scoreBgLayer);
+    if(map.hasLayer(scoreTileLayer)) map.removeLayer(scoreTileLayer);
+  }
 }
 
 function setOpacity(val){
   scoreOpacity = val/100;
+  if(scoreBgLayer)   scoreBgLayer.setOpacity(scoreOpacity);
   if(scoreTileLayer) scoreTileLayer.setOpacity(scoreOpacity);
 }
 
@@ -273,10 +289,9 @@ const MODE_INFO = {
 
 function switchScoreMode(mode){
   currentScoreMode = mode;
-  const v = '?v=20260513';
-  if(scoreTileLayer){
-    scoreTileLayer.setUrl(`tiles/${mode}/{z}/{x}/{y}.png${v}`);
-  }
+  const url = _tileUrl(mode);
+  if(scoreBgLayer)   scoreBgLayer.setUrl(url);
+  if(scoreTileLayer) scoreTileLayer.setUrl(url);
   // 凡例を更新
   const info = MODE_INFO[mode] || MODE_INFO.total;
   document.getElementById('legend-mode-title').textContent = info.title;
