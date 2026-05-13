@@ -154,7 +154,6 @@ html,body{margin:0;padding:0;height:100%;font-family:-apple-system,'Hiragino San
 <script>
 const map = L.map('map').setView([36.5, 137.0], 6);
 
-map.createPane('scoreBase'); map.getPane('scoreBase').style.zIndex = 295; map.getPane('scoreBase').style.pointerEvents = 'none';
 map.createPane('score'); map.getPane('score').style.zIndex = 300; map.getPane('score').style.pointerEvents = 'none';
 map.createPane('hazard'); map.getPane('hazard').style.zIndex = 450; map.getPane('hazard').style.pointerEvents = 'none';
 map.createPane('substations'); map.getPane('substations').style.zIndex = 500;
@@ -240,23 +239,19 @@ function fuelColor(fuel){
 
 function showLoading(v){document.getElementById('loading').style.display=v?'block':'none';}
 
-// ── スコアレイヤー (2層構成: 下地z=9コンポジット + 上層z=10-11 hires) ────
-// 下地: maxNativeZoom=9 → z>9で upscale、排除ゾーンの穴を埋める
-// 上層: minZoom=10, maxNativeZoom=11 → 30mhiresタイルで上書き
+// ── スコアレイヤー (単一XYZタイルレイヤー) ───────────────
+// z=5-9: gen_tiles_wind.py 合成タイル (全国カバー)
+// z=10-11: gen_hires_tiles.py 30m タイル (都道府県別)
+// z>=12: z=11 をアップスケール (maxNativeZoom=11)
 let scoreTileLayer = null;
-let scoreBgLayer   = null;
+let scoreBgLayer   = null; // 互換性のため残す (常にnull)
 
 function _tileUrl(mode){ return `tiles/${mode}/{z}/{x}/{y}.png?v=20260513`; }
 
 function ensureScoreTileLayer(){
   if(scoreTileLayer) return;
-  scoreBgLayer = L.tileLayer(_tileUrl(currentScoreMode), {
-    minZoom: 5, maxNativeZoom: 9, maxZoom: 18,
-    opacity: scoreOpacity, pane: 'scoreBase',
-    attribution: '', tileSize: 256
-  });
   scoreTileLayer = L.tileLayer(_tileUrl(currentScoreMode), {
-    minZoom: 10, maxNativeZoom: 11, maxZoom: 18,
+    minZoom: 5, maxNativeZoom: 11, maxZoom: 18,
     opacity: scoreOpacity, pane: 'score',
     attribution: '', tileSize: 256
   });
@@ -266,17 +261,19 @@ function toggleScoreLayer(){
   const on = document.getElementById('chkScore').checked;
   ensureScoreTileLayer();
   if(on){
-    if(!map.hasLayer(scoreBgLayer))   scoreBgLayer.addTo(map);
     if(!map.hasLayer(scoreTileLayer)) scoreTileLayer.addTo(map);
+    updateHires();
   } else {
-    if(map.hasLayer(scoreBgLayer))   map.removeLayer(scoreBgLayer);
     if(map.hasLayer(scoreTileLayer)) map.removeLayer(scoreTileLayer);
+    // hiresLayerも一緒に非表示
+    if(hiresLayer){ map.removeLayer(hiresLayer); hiresLayer=null; hiresLoadedKey=null; }
+    _setXyzOpacity(scoreOpacity); // 次回ON時のためにopacityをリセット
+    document.getElementById('hiresStatus').style.display='none';
   }
 }
 
 function setOpacity(val){
   scoreOpacity = val/100;
-  if(scoreBgLayer)   scoreBgLayer.setOpacity(scoreOpacity);
   if(scoreTileLayer) scoreTileLayer.setOpacity(scoreOpacity);
   if(hiresLayer)     hiresLayer.setOpacity(scoreOpacity);
 }
@@ -295,7 +292,6 @@ const MODE_INFO = {
 function switchScoreMode(mode){
   currentScoreMode = mode;
   const url = _tileUrl(mode);
-  if(scoreBgLayer)   scoreBgLayer.setUrl(url);
   if(scoreTileLayer) scoreTileLayer.setUrl(url);
   // hiresLayerをリロード
   hiresLoadedKey=null; hiresLoadedMode=null;
@@ -501,7 +497,6 @@ function findPrefAtCenter(){
 }
 
 function _setXyzOpacity(v){
-  if(scoreBgLayer)   scoreBgLayer.setOpacity(v);
   if(scoreTileLayer) scoreTileLayer.setOpacity(v);
 }
 
@@ -543,11 +538,15 @@ async function loadHiresTif(prefKey, mode){
 
 function updateHires(){
   if(!IS_LOCAL) return;
-  const chk=document.getElementById('chkHires');
-  if(!chk||!chk.checked){
+  const scoreOn = document.getElementById('chkScore')?.checked;
+  const chkH = document.getElementById('chkHires');
+  const st = document.getElementById('hiresStatus');
+  const hiresWanted = scoreOn && chkH?.checked;
+
+  if(!hiresWanted){
     if(hiresLayer){map.removeLayer(hiresLayer);hiresLayer=null;hiresLoadedKey=null;}
-    _setXyzOpacity(scoreOpacity); // XYZタイルを復元
-    document.getElementById('hiresStatus').style.display='none';
+    if(scoreOn) _setXyzOpacity(scoreOpacity); // スコアON時のみXYZを復元
+    if(st) st.style.display='none';
     return;
   }
   const z=map.getZoom();
@@ -557,8 +556,7 @@ function updateHires(){
   }else{
     if(hiresLayer){map.removeLayer(hiresLayer);hiresLayer=null;hiresLoadedKey=null;}
     _setXyzOpacity(scoreOpacity);
-    document.getElementById('hiresStatus').textContent='z≥12で有効';
-    document.getElementById('hiresStatus').style.display='block';
+    if(st){st.textContent='z≥12で有効';st.style.display='block';}
   }
 }
 
@@ -573,7 +571,6 @@ async function init(){
     updatePrefSelect('all');
     ensureScoreTileLayer();
     if(document.getElementById('chkScore').checked){
-      scoreBgLayer.addTo(map);
       scoreTileLayer.addTo(map);
     }
     if(IS_LOCAL){
