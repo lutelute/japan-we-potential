@@ -246,14 +246,22 @@ function showLoading(v){document.getElementById('loading').style.display=v?'bloc
 let scoreTileLayer = null;
 let scoreBgLayer   = null; // 互換性のため残す (常にnull)
 
-function _tileUrl(mode){ return `tiles/${mode}/{z}/{x}/{y}.png?v=20260513`; }
+const R2_BASE = 'https://pub-52fc239ba92b4e08a630574f73391fc5.r2.dev';
+const R2_MAX_ZOOM = 11; // pws-160coreでz=12-14生成後に更新予定
+
+function _tileUrl(mode){
+  // z=5-11: R2ホスト (GitHub Pagesのサイズ制限を回避)
+  // z=12+: R2ホスト (将来的にz=14まで拡張予定)
+  return `${R2_BASE}/tiles/${mode}/{z}/{x}/{y}.png`;
+}
 
 function ensureScoreTileLayer(){
   if(scoreTileLayer) return;
   scoreTileLayer = L.tileLayer(_tileUrl(currentScoreMode), {
-    minZoom: 5, maxNativeZoom: 11, maxZoom: 18,
+    minZoom: 5, maxNativeZoom: R2_MAX_ZOOM, maxZoom: 18,
     opacity: scoreOpacity, pane: 'score',
-    attribution: '', tileSize: 256
+    attribution: '', tileSize: 256,
+    crossOrigin: true
   });
 }
 
