@@ -1,0 +1,80 @@
+japan-we-potential — Third-Party Data Notices and Attributions
+==============================================================
+
+This repository combines original code (MIT) with data that is derived from
+several third-party sources. Attributions and licenses:
+
+1. OpenStreetMap — transmission lines, substations, power plants, land use,
+   residential areas, roads
+   - (c) OpenStreetMap contributors
+   - Open Database License (ODbL) v1.0 — https://opendatacommons.org/licenses/odbl/
+   - docs/grid/*.geojson are regional extracts of All-Japan-Grid
+     (https://github.com/lutelute/All-Japan-Grid), which is built from
+     OpenStreetMap. They are a Derivative Database and are therefore
+     distributed under ODbL (share-alike).
+   - OSM land use, buildings / residential areas and roads (fetched via the
+     Overpass API, overpass-api.de) are used as scoring inputs. The raw OSM
+     extracts are not redistributed.
+   - The score tiles (docs/tiles/ and the tiles hosted on Cloudflare R2 that
+     the web map loads) are Produced Works computed from OpenStreetMap
+     together with the sources in 2-4; keep "(c) OpenStreetMap contributors"
+     when reusing them.
+
+2. Wind speed — ERA5 (Copernicus Climate Change Service)
+   - Contains modified Copernicus Climate Change Service information
+     (ERA5 monthly averaged 100 m wind speed, 2014-2023).
+   - Licence: CC BY 4.0 — https://creativecommons.org/licenses/by/4.0/
+   - Dataset: Hersbach, H. et al. (2023): ERA5 monthly averaged data on single
+     levels from 1940 to present. Copernicus Climate Change Service (C3S)
+     Climate Data Store (CDS). DOI: 10.24381/cds.f17050d7
+   - Neither the European Commission nor ECMWF is responsible for any use
+     that may be made of the Copernicus information or data it contains.
+   - The ERA5 NetCDF files themselves are not redistributed (data/ is not
+     tracked). If the wind layer was computed with --wind-fallback, the wind
+     score is an elevation-based estimate instead of ERA5.
+
+3. Elevation / slope — SRTM
+   - NASA Shuttle Radar Topography Mission (SRTM), public domain (NASA / USGS)
+   - Obtained via Terrain Tiles on AWS (Mapzen / Tilezen, "skadi" HGT tiles)
+     https://registry.opendata.aws/terrain-tiles/
+     Attribution guidance: https://github.com/tilezen/joerd/blob/master/docs/attribution.md
+
+4. National Land Numerical Information / 国土数値情報 (MLIT, Japan)
+   - 行政区域データ (N03, 2024) — 使用許諾条件: オープンデータ (CC BY 4.0)
+     https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-N03-2024.html
+     Used to clip scores to prefectures / Hokkaido subprefectures.
+     The original files are not redistributed.
+   - 出典 / Attribution:
+       「国土数値情報（行政区域データ）」（国土交通省）
+       （https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-N03-2024.html）をもとに作成
+   - Terms: 国土数値情報ダウンロードサイト コンテンツ利用規約
+     https://nlftp.mlit.go.jp/ksj/other/agreement.html
+     The scores in this repository are processed by the repository author and
+     are not published by the Government of Japan.
+
+5. Map tiles loaded at runtime by the web map (NOT redistributed)
+   - CARTO basemaps — (c) OpenStreetMap contributors (c) CARTO
+     https://carto.com/attributions
+   - OpenStreetMap standard tiles — (c) OpenStreetMap contributors
+     Tile usage policy: https://operations.osmfoundation.org/policies/tiles/
+   - 地理院タイル（標準地図・全国最新写真（シームレス））— 出典: 国土地理院
+     https://maps.gsi.go.jp/development/ichiran.html
+     (low zoom levels of the seamless photo include Landsat-8 imagery,
+     courtesy of NASA / USGS)
+   - ハザードマップポータルサイト「重ねるハザードマップ」オープンデータ
+     （洪水浸水想定区域・土砂災害警戒区域・津波浸水想定）— 国土交通省 / 国土地理院
+     https://disaportal.gsi.go.jp/hazardmapportal/hazardmap/copyright/opendata.html
+     The 土砂災害警戒区域 tiles are made by GSI from 「国土数値情報（土砂災害警戒区域データ）」.
+   - Google tiles (mt1.google.com) — (c) Google. Direct tile access outside
+     the Google Maps Platform APIs may not be permitted by Google's terms.
+
+---
+
+Code in src/, root *.py and the web map HTML/JS: MIT License (see LICENSE).
+OSM-derived network data in docs/grid/: ODbL v1.0.
+Score tiles: contain information from OpenStreetMap (ODbL), ERA5 (C3S,
+CC BY 4.0), SRTM (NASA / USGS) and 国土数値情報 (MLIT); see 1-4 above.
+
+When reusing this repository, please retain the OpenStreetMap, Copernicus
+and 国土数値情報 attributions above and comply with ODbL share-alike for the
+network data.

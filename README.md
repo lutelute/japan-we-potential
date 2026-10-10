@@ -148,3 +148,16 @@ data/                    — 入力データ (.gitignore)
 
 - **[japan-re-potential](../japan-re-potential)**: 太陽光版。DEM/slope/grid データを共有利用
 - **[All-Japan-Grid](../All-Japan-Grid)**: OSM由来の全国送電網データセット
+
+---
+
+## ライセンスと出典 / License & Attribution
+
+- コード / Code: MIT（[LICENSE](LICENSE)）
+- 送電網データ / Grid data（`docs/grid/`）: [All-Japan-Grid](https://github.com/lutelute/All-Japan-Grid) 経由の OpenStreetMap 派生データ。© [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors、[ODbL 1.0](https://opendatacommons.org/licenses/odbl/)
+- 適地スコア / Score tiles（`docs/tiles/`、R2 配信タイル）: OpenStreetMap（© OpenStreetMap contributors）・ERA5・SRTM・国土数値情報をもとに作成
+- 風速 / Wind: Contains modified Copernicus Climate Change Service information（ERA5 月平均 100m 風速 2014–2023, CC BY 4.0, DOI: [10.24381/cds.f17050d7](https://doi.org/10.24381/cds.f17050d7)）。Neither the European Commission nor ECMWF is responsible for any use that may be made of the Copernicus information or data it contains.
+- 国土数値情報: 「国土数値情報（行政区域データ）」（国土交通省, https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-N03-2024.html）をもとに作成。元データは再配布しない
+- 標高・傾斜 / Elevation: SRTM（NASA / USGS、パブリックドメイン。[Terrain Tiles on AWS](https://registry.opendata.aws/terrain-tiles/) 経由）
+- 背景地図 / Basemaps: CARTO・OpenStreetMap・[地理院タイル](https://maps.gsi.go.jp/development/ichiran.html)・Google、ハザード: [ハザードマップポータルサイト](https://disaportal.gsi.go.jp/hazardmapportal/hazardmap/copyright/opendata.html)（いずれも表示時に読み込むだけで再配布しない）
+- 出典の詳細 / Full notices: [NOTICE](NOTICE)
