@@ -99,11 +99,7 @@ python src/mesh_suitability_wind.py -p fukui -r 0
 | ERA5ダウンロード | 数時間 | ローカル可 (I/O待ち) |
 | OSMデータ取得 | 数時間 | ローカル可 (API律速) |
 
-pws-160core 接続:
-```bash
-ssh pws-ubuntu-server@10.0.70.42     # LAN
-ssh pws-ubuntu-server@100.104.225.55  # Tailscale
-```
+pws-160core 接続: 研究室の計算サーバー。接続先（ユーザー名・アドレス）は研究室の内部資料を参照。
 
 ---
 
